@@ -19,8 +19,8 @@ executable game
   other-modules:
       Game
       GameHandler
+      Graph
       Graphics
-      Units
       Utils
       Paths_game
   hs-source-dirs:
