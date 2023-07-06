@@ -17,6 +17,9 @@ custom-setup
 executable game
   main-is: Main.hs
   other-modules:
+      GameHandler
+      Graphics
+      Units
       Paths_game
   hs-source-dirs:
       ./
