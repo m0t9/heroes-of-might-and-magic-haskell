@@ -3,6 +3,8 @@ name: game
 custom-setup:
   dependencies:
     - gloss
+    - base
+    - Cabal
 
 dependencies:
   - base >= 4.7 && < 5

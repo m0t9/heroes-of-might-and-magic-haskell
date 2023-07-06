@@ -10,7 +10,9 @@ build-type:     Custom
 
 custom-setup
   setup-depends:
-      gloss
+      Cabal
+    , base
+    , gloss
 
 executable game
   main-is: Main.hs
