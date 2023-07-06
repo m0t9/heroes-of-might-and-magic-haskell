@@ -1,0 +1,10 @@
+resolver: lts-20.23
+
+packages:
+  - ./game
+
+extra-deps:
+  - gloss-1.13.2.2
+
+ghc-options:
+  "$locals": -Wall -fno-warn-type-defaults
