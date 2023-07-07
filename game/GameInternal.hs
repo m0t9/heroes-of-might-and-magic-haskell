@@ -87,11 +87,9 @@ getAttackableEntities gameState unit@(Unit unitType _) = (getAttackableEntitiesF
 
 data AttackResult = AttackResult {getDamager :: Maybe Unit, getVictim :: Maybe Unit}
 
-
 -- | Attack functions
-meleeAttack :: Unit -> Unit -> JavaRandom AttackResult
-meleeAttack unit1@(Unit _ state1) unit2@(Unit unitType2 state2) = do
-
+meleeAttackWithMultiplier :: Double -> Unit -> Unit -> JavaRandom AttackResult 
+meleeAttackWithMultiplier coefficient unit1@(Unit _ state1) (Unit unitType2 state2) = do
   let stackSize = getStackSize state1
   let damage = getDamage (getProps state1)
 
@@ -101,11 +99,11 @@ meleeAttack unit1@(Unit _ state1) unit2@(Unit unitType2 state2) = do
     return (damage !! index)
     )
 
-  let totalDamage = sum damages
+  let totalDamage = int2Double (sum damages) * coefficient
   let i = getAttackPoints (getProps state1) - getDefensePoints (getProps state2)
   let damageCoefficient = (1.0 + 0.1 * (int2Double (sign i))) ^ abs i
 
-  let finalDamage = floor (int2Double totalDamage * int2Double stackSize * damageCoefficient)
+  let finalDamage = floor (totalDamage * int2Double stackSize * damageCoefficient)
 
   let health2 = (getHealth (getProps state2))
   let totalHealth = (getHealthOfLast state2) + (getStackSize state2 - 1) * health2
@@ -124,8 +122,14 @@ meleeAttack unit1@(Unit _ state1) unit2@(Unit unitType2 state2) = do
       return (AttackResult (Just unit1) (Just (Unit unitType2 newState2)))
 
 
+meleeAttack :: Unit -> Unit -> JavaRandom AttackResult
+meleeAttack = meleeAttackWithMultiplier 1.0
+
 rangeAttack :: Unit -> Unit -> JavaRandom AttackResult
-rangeAttack unit1@(Unit _ state1) unit2@(Unit _ state2) = return (AttackResult (Just unit1) (Just unit2))
+rangeAttack unit1@(Unit _ state1) unit2@(Unit _ state2) = do
+  if length (getPath (getCoords state1) (getCoords state2)) - 1 <= 1
+    then (parryAttackWrapper (meleeAttackWithMultiplier 0.5)) unit1 unit2
+    else meleeAttack unit1 unit2
 
 parryAttackWrapper :: (Unit -> Unit -> JavaRandom AttackResult) -> Unit -> Unit -> JavaRandom AttackResult
 parryAttackWrapper func unit1 unit2 = do
