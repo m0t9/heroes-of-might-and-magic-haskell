@@ -19,8 +19,10 @@ executable game
   other-modules:
       Game
       GameHandler
+      GameInternal
       Graph
       Graphics
+      Random
       Utils
       Paths_game
   hs-source-dirs:

@@ -9,3 +9,9 @@ getPath (x1, y1) (x2, y2) =
       | x1' == x2' = []
       | x2' > x1'  = [x1'..x2']
       | otherwise  = reverse [x2'..x1']
+
+sign :: Int -> Int
+sign num
+  | num > 0   = 1
+  | num < 0   = -1
+  | otherwise = 0
