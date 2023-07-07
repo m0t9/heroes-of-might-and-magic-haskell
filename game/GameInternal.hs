@@ -16,26 +16,42 @@ data Player = Player Bool deriving (Eq)
 
 -- | Unit related data types
 data UnitType =
-  Pikeman | Archer | Swordsman | Monk  -- | Castle faction
-  | Dwarf | WoodElf | DenroidGuard     -- | Rampart faction
+  Pikeman | Archer | Swordsman | Monk        -- | Castle fraction
+  | Dwarf | WoodElf | DenroidGuard           -- | Rampart fraction
+  | Troglodyte | Harpy | Beholder | Minotaur -- | Dungeon fraction
 data UnitProps = UnitProps {getAttackPoints :: Int, getDefensePoints :: Int, getDamage :: [Int], getHealth :: Int, getSpeed :: Int, getAmmo :: Int}
 
 data UnitState = UnitState {getProps :: UnitProps, getPlayer :: Player, getCoords :: (Int, Int), getHealthOfLast :: Int, getCurrentAmmo :: Int, getStackSize :: Int}
 
 data Unit = Unit UnitType UnitState
 
+-- | State mutations
+changeStateCoords :: UnitState -> (Int, Int) -> UnitState
+changeStateCoords state coords = UnitState (getProps state) (getPlayer state) (coords) (getHealthOfLast state) (getCurrentAmmo state) (getStackSize state)
+
+changeStateHealthOfLast :: UnitState -> Int -> UnitState
+changeStateHealthOfLast state health = UnitState (getProps state) (getPlayer state) (getCoords state) (health) (getCurrentAmmo state) (getStackSize state)
+
+changeStateStackSize :: UnitState -> Int -> UnitState
+changeStateStackSize state stackSize = UnitState (getProps state) (getPlayer state) (getCoords state) (getHealthOfLast state) (getCurrentAmmo state) (stackSize)
+
 
 -- | Initial properties
 getInitialProps :: UnitType -> UnitProps
--- || Castle faction
+-- || Castle fraction
 getInitialProps Pikeman   = UnitProps 4 5 [1..3] 10 4 0      -- Tier 1
 getInitialProps Archer    = UnitProps 6 3 [2..3] 10 4 12     -- Tier 2
 getInitialProps Swordsman = UnitProps 6 3 [2..3] 10 4 12     -- Tier 4
 getInitialProps Monk      = UnitProps 12 7 [10..12] 30 4 12  -- Tier 5
--- || Rampart faction
-getInitialProps Dwarf             = UnitProps 6 3 [2..3] 10 4 12     -- Tier 2
-getInitialProps WoodElf           = UnitProps 9 5 [3..5] 15 6 24     -- Tier 3
-getInitialProps DenroidGuard      = UnitProps 9 12 [10..14] 55 3 0   -- Tier 5
+-- || Rampart fraction
+getInitialProps Dwarf        = UnitProps 6 3 [2..3] 10 4 12     -- Tier 2
+getInitialProps WoodElf      = UnitProps 9 5 [3..5] 15 6 24     -- Tier 3
+getInitialProps DenroidGuard = UnitProps 9 12 [10..14] 55 3 0   -- Tier 5
+-- || Dungeon fraction
+getInitialProps Troglodyte = UnitProps 4 3 [1..3] 5 4 0       -- Tier 2
+getInitialProps Harpy      = UnitProps 9 5 [3..5] 15 6 24     -- Tier 3
+getInitialProps Beholder   = UnitProps 9 12 [10..14] 55 3 0   -- Tier 5
+getInitialProps Minotaur   = UnitProps 9 12 [10..14] 55 3 0   -- Tier 5
 
 -- | Attack strategies
 
@@ -70,25 +86,30 @@ filterEnemyWrapper :: (GameState -> Unit -> [Unit]) -> GameState -> Unit -> [Uni
 filterEnemyWrapper func gameState unit@(Unit _ state) = filterEnemy (getPlayer state) (func gameState unit)
 
 getAttackableEntitiesFunc :: UnitType -> (GameState -> Unit -> [Unit])
--- ||| Castle faction
+-- ||| Castle fraction
 getAttackableEntitiesFunc Pikeman      = filterEnemyWrapper getMeleeAttackableEntities
 getAttackableEntitiesFunc Swordsman    = filterEnemyWrapper getMeleeAttackableEntities
 getAttackableEntitiesFunc Archer       = filterEnemyWrapper getRangedAttackableEntities
 getAttackableEntitiesFunc Monk         = filterEnemyWrapper getRangedAttackableEntities
--- ||| Rampart faction
+-- ||| Rampart fraction
 getAttackableEntitiesFunc Dwarf        = filterEnemyWrapper getMeleeAttackableEntities
 getAttackableEntitiesFunc WoodElf      = filterEnemyWrapper getRangedAttackableEntities
 getAttackableEntitiesFunc DenroidGuard = filterEnemyWrapper getMeleeAttackableEntities
+-- ||| Dungeon fraction
+getAttackableEntitiesFunc Troglodyte   = filterEnemyWrapper getMeleeAttackableEntities
+getAttackableEntitiesFunc Harpy        = filterEnemyWrapper getRangedAttackableEntities
+getAttackableEntitiesFunc Beholder     = filterEnemyWrapper getMeleeAttackableEntities
+getAttackableEntitiesFunc Minotaur     = filterEnemyWrapper getMeleeAttackableEntities
 
 -- ||| Strategies for each unit
 getAttackableEntities :: GameState -> Unit -> [Unit]
 getAttackableEntities gameState unit@(Unit unitType _) = (getAttackableEntitiesFunc unitType) gameState unit
 
 
-data AttackResult = AttackResult {getDamager :: Maybe Unit, getVictim :: Maybe Unit}
+data AttackResult = AttackResult {getDamager :: Unit, getVictim :: Maybe Unit}
 
 -- | Attack functions
-meleeAttackWithMultiplier :: Double -> Unit -> Unit -> JavaRandom AttackResult 
+meleeAttackWithMultiplier :: Double -> Unit -> Unit -> JavaRandom AttackResult
 meleeAttackWithMultiplier coefficient unit1@(Unit _ state1) (Unit unitType2 state2) = do
   let stackSize = getStackSize state1
   let damage = getDamage (getProps state1)
@@ -109,7 +130,7 @@ meleeAttackWithMultiplier coefficient unit1@(Unit _ state1) (Unit unitType2 stat
   let totalHealth = (getHealthOfLast state2) + (getStackSize state2 - 1) * health2
 
   if totalHealth == 0
-    then return (AttackResult (Just unit1) (Nothing))
+    then return (AttackResult (unit1) (Nothing))
     else do
       let finalHealth = finalDamage - totalHealth
       let temp = finalHealth `mod` health2
@@ -117,9 +138,9 @@ meleeAttackWithMultiplier coefficient unit1@(Unit _ state1) (Unit unitType2 stat
       let newHealthOfLast = if temp == 0 then health2 else temp
       let newStackSize = (finalHealth `div` health2) + (sign temp)
 
-      let newState2 = UnitState (getProps state2) (getPlayer state2) (getCoords state2) (newHealthOfLast) (getCurrentAmmo state2) (newStackSize)
+      let newState2 = changeStateStackSize (changeStateHealthOfLast state2 newHealthOfLast) newStackSize
 
-      return (AttackResult (Just unit1) (Just (Unit unitType2 newState2)))
+      return (AttackResult (unit1) (Just (Unit unitType2 newState2)))
 
 
 meleeAttack :: Unit -> Unit -> JavaRandom AttackResult
@@ -127,9 +148,15 @@ meleeAttack = meleeAttackWithMultiplier 1.0
 
 rangeAttack :: Unit -> Unit -> JavaRandom AttackResult
 rangeAttack unit1@(Unit _ state1) unit2@(Unit _ state2) = do
-  if length (getPath (getCoords state1) (getCoords state2)) - 1 <= 1
+  let isClose = length (getPath (getCoords state1) (getCoords state2)) - 1 <= 1
+  if isClose || getCurrentAmmo state2 <= 0
     then (parryAttackWrapper (meleeAttackWithMultiplier 0.5)) unit1 unit2
-    else meleeAttack unit1 unit2
+    else do
+      (AttackResult (Unit damagerType damagerState) victim) <- meleeAttack unit1 unit2
+
+      let newDamageState = UnitState (getProps damagerState) (getPlayer damagerState) (getCoords damagerState) (getHealthOfLast damagerState) (getCurrentAmmo damagerState - 1) (getStackSize damagerState)
+
+      return (AttackResult (Unit damagerType newDamageState) victim)
 
 parryAttackWrapper :: (Unit -> Unit -> JavaRandom AttackResult) -> Unit -> Unit -> JavaRandom AttackResult
 parryAttackWrapper func unit1 unit2 = do
@@ -137,24 +164,32 @@ parryAttackWrapper func unit1 unit2 = do
     parryIfPossibleFunc firstAttack
   where
     parryIfPossibleFunc :: AttackResult -> JavaRandom AttackResult
-    parryIfPossibleFunc attackResult@(AttackResult damager victim) = fromMaybe (return attackResult) a
+    parryIfPossibleFunc attackResult@(AttackResult damager victim) = fromMaybe defaultValue maybeValue
       where
-        a = do
-          victimUnit <- victim
-          damagerUnit <- damager
-          return (meleeAttack damagerUnit victimUnit)
+        defaultValue = return attackResult
+        maybeValue = meleeAttack damager <$> victim
 
 
 getAttackFunc :: UnitType -> (Unit -> Unit -> JavaRandom AttackResult)
--- ||| Castle faction
+-- ||| Castle fraction
 getAttackFunc Pikeman      = parryAttackWrapper meleeAttack
 getAttackFunc Swordsman    = parryAttackWrapper meleeAttack
 getAttackFunc Archer       = rangeAttack
 getAttackFunc Monk         = rangeAttack
--- ||| Rampart faction
+-- ||| Rampart fraction
 getAttackFunc Dwarf        = parryAttackWrapper meleeAttack
 getAttackFunc WoodElf      = rangeAttack
 getAttackFunc DenroidGuard = parryAttackWrapper meleeAttack
+-- ||| Dungeon fraction
+getAttackFunc Troglodyte   = parryAttackWrapper meleeAttack
+getAttackFunc Harpy        = rangeAttack
+getAttackFunc Beholder     = rangeAttack
+getAttackFunc Minotaur     = parryAttackWrapper meleeAttack
 
 attack :: Unit -> Unit -> JavaRandom AttackResult
 attack unit1@(Unit unitType _) unit2 = (getAttackFunc unitType) unit1 unit2
+
+postAttack :: Unit -> Maybe Unit -> Maybe Unit
+postAttack _ Nothing = Nothing
+postAttack before@(Unit Harpy _) (Just (Unit Harpy _)) = Just before
+postAttack _ after = after
