@@ -5,14 +5,11 @@
 {-# HLINT ignore "Use newtype instead of data" #-}
 {-# HLINT ignore "Use <$>" #-}
 module GameInternal where
-import Utils (getPath, sign)
+import Utils (getPath, sign, Coords)
 import Random (JavaRandom, randomInt)
 import Data.Maybe (fromMaybe)
 import Control.Monad (replicateM)
 import GHC.Float (int2Double)
-
--- | Field coordinates
-type Coords = (Int, Int)
 
 -- | Game related data types
 data GameState = GameState {getUnits :: [Unit]}
@@ -25,12 +22,12 @@ data UnitType =
   | Troglodyte | Harpy | Beholder | Minotaur -- | Dungeon fraction
 data UnitProps = UnitProps {getAttackPoints :: Int, getDefensePoints :: Int, getDamage :: [Int], getHealth :: Int, getSpeed :: Int, getAmmo :: Int}
 
-data UnitState = UnitState {getProps :: UnitProps, getPlayer :: Player, getCoords :: (Int, Int), getHealthOfLast :: Int, getCurrentAmmo :: Int, getStackSize :: Int}
+data UnitState = UnitState {getProps :: UnitProps, getPlayer :: Player, getCoords :: Coords, getHealthOfLast :: Int, getCurrentAmmo :: Int, getStackSize :: Int}
 
 data Unit = Unit UnitType UnitState
 
 -- | State mutations
-changeStateCoords :: UnitState -> (Int, Int) -> UnitState
+changeStateCoords :: UnitState -> Coords -> UnitState
 changeStateCoords state coords = UnitState (getProps state) (getPlayer state) (coords) (getHealthOfLast state) (getCurrentAmmo state) (getStackSize state)
 
 changeStateHealthOfLast :: UnitState -> Int -> UnitState
@@ -120,9 +117,9 @@ meleeAttackWithMultiplier
   :: Double -- | Damager multiplier
   -> Unit   -- | Damager
   -> Unit   -- | Victim
-  -> Coords -- | Coordinates to attack from
+  -> Coords -- | Coords from which unit will attack
   -> JavaRandom AttackResult
-meleeAttackWithMultiplier coefficient unit1@(Unit unitType1 state1) (Unit unitType2 state2) attackCoords = do
+meleeAttackWithMultiplier coefficient (Unit unitType1 state1) (Unit unitType2 state2) attackCoords = do
   let stackSize = getStackSize state1
   let damage = getDamage (getProps state1)
 
@@ -157,16 +154,16 @@ meleeAttackWithMultiplier coefficient unit1@(Unit unitType1 state1) (Unit unitTy
       return (AttackResult (Just movedUnit1) (Just (Unit unitType2 newState2)))
 
 meleeAttack
-  :: Unit -- | Damager
-  -> Unit -- | Victim
-  -> Coords -- | Coords
+  :: Unit   -- | Damager
+  -> Unit   -- | Victim
+  -> Coords -- | Coords from which unit will attack
   -> JavaRandom AttackResult
 meleeAttack = meleeAttackWithMultiplier 1.0 
 
 rangeAttack
   :: Unit   -- | Damager
   -> Unit   -- | Victim
-  -> Coords -- |
+  -> Coords -- | Coords from which unit will attack
   -> JavaRandom AttackResult
 rangeAttack unit1@(Unit _ state1) unit2@(Unit _ state2) coords = do
   let isClose = length (getPath (getCoords state1) (getCoords state2)) - 1 <= 1
@@ -215,7 +212,7 @@ getAttackFunc Minotaur     = parryAttackWrapper meleeAttack
 attack
   :: Unit   -- | Damager
   -> Unit   -- | Victim
-  -> Coords -- |
+  -> Coords -- | Coords from which unit will attack
   -> JavaRandom AttackResult
 attack unit1@(Unit unitType _) unit2 coords = do
   (AttackResult damager victim) <- (getAttackFunc unitType) unit1 unit2 coords
