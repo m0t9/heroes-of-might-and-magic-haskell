@@ -32,10 +32,10 @@ graphVertices (Graph (x:y)) [] = x : y
 graphVertices (Graph (x:y)) keys = filter (\ z -> vertexLabel z `elem` keys) (x:y)
 
 -- BFS
-bfs :: Graph -> Graph -> [Vertex] -> [Vertex] -> Graph
-bfs (Graph []) _ _ _ = Graph []
-bfs _ outGraph [] _ = outGraph
-bfs (Graph (a:b)) (Graph (c:d)) (e:f) (g:h) = bfs inGraph outGraph queue seen'
+bfs :: Graph -> Graph -> [Vertex] -> [Vertex] -> (Coords -> Bool) -> Graph
+bfs (Graph []) _ _ _ _ = Graph []
+bfs _ outGraph [] _ _ = outGraph
+bfs (Graph (a:b)) (Graph (c:d)) (e:f) (g:h) isObstacle' = bfs inGraph outGraph queue seen' isObstacle'
   where 
     inGraph = Graph (a:b)
     eLabel = vertexLabel e
@@ -43,17 +43,18 @@ bfs (Graph (a:b)) (Graph (c:d)) (e:f) (g:h) = bfs inGraph outGraph queue seen'
     eVertexNeighbors = graphVertices inGraph eNeighbors
     dist = vertexDistance e + 1
     seen = g : h
-    filteredNeighbors = filterVertexNeighbors seen eVertexNeighbors
+    filteredNeighbors = filterVertexNeighbors seen eVertexNeighbors isObstacle'
     enqueue = updateDistPred filteredNeighbors dist eLabel
     outGraph = Graph $ (c:d) ++ enqueue
     queue = f ++ enqueue
     seen' = seen ++ enqueue
 
 -- Omit improper vertices (and obstacles)
-filterVertexNeighbors :: [Vertex] -> [Vertex] -> [Vertex]
-filterVertexNeighbors _ [] = []
-filterVertexNeighbors [] _ = []
-filterVertexNeighbors s vn = filter (\ x -> not (vertexInVertices x s) && not (isObstacle x)) vn
+filterVertexNeighbors :: [Vertex] -> [Vertex] -> (Coords -> Bool) -> [Vertex]
+filterVertexNeighbors _ [] _ = []
+filterVertexNeighbors [] _ _ = []
+filterVertexNeighbors s vn isObstacle' = 
+  filter (\ x -> not (vertexInVertices x s) && not (isObstacle x) && not (isObstacle' (vertexLabel x))) vn
 
 -- Reset graph for BFS
 resetGraph :: Graph -> Graph
@@ -77,8 +78,8 @@ getVertices :: Graph -> [Vertex]
 getVertices (Graph v) = v
 
 -- Method to get path from first coords to second
-findPath :: Graph -> Coords -> Coords -> Maybe [Coords]
-findPath g f t = 
+findPath :: Graph -> Coords -> Coords -> (Coords -> Bool) -> Maybe [Coords]
+findPath g f t isObstacle' = 
   if null (graphVertices tree [t])
     then Nothing
     else Just (reverse (buildPath t (vertices tree)))
@@ -86,7 +87,7 @@ findPath g f t =
     queue = graphVertices cleanGraph [f]
     outGraph = Graph queue
     cleanGraph = resetGraph g
-    tree = bfs cleanGraph outGraph queue queue
+    tree = bfs cleanGraph outGraph queue queue isObstacle'
 
     find :: Coords -> [Vertex] -> Maybe Vertex
     find x [] = Nothing
