@@ -1,9 +1,13 @@
 module Utils where
 
+
+-- | Field coordinates
+type Coords = (Int, Int)
+
 getPath
-  :: (Int, Int) -- | From
-  -> (Int, Int) -- | To
-  -> [(Int, Int)]
+  :: Coords -- | From
+  -> Coords -- | To
+  -> [Coords]
 getPath (x1, y1) (x2, y2) =
   map (\i -> (i, y1)) (getPath' x1 x2) ++ map (\i -> (i, x2)) (getPath' y1 y2)
   where
