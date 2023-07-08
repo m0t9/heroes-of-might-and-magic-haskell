@@ -49,3 +49,6 @@ coordsToHex (xOffset, yOffset) (x, y) side
       | isDotInHexagon (x1, y2) = Just (x1, y2)
       | isDotInHexagon (x2, y2) = Just (x2, y2)
       | otherwise               = Nothing
+
+
+      
