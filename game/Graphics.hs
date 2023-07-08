@@ -6,7 +6,7 @@ hexToCoords (xOffset, yOffset) (xHex, yHex) side =
   where
     x = fromIntegral xHex
     y = fromIntegral yHex
-    yShift = side * (1 + y)
+    yShift = side * (1+ 1.5*y)--(1 + (2*y))
     xShift
       | even yHex = (sqrt 3) * side * (1 + x) 
       | otherwise = (sqrt 3) * side * (1/2 + x)
@@ -42,4 +42,4 @@ drawField (x, y) (xF, yF)
   | otherwise = drawField (x+1, y) (xF, yF) <> drawCell (x, y)
 
 drawCell :: CellCoords -> Field
-drawCell cellCoords = polygon (makeHexagonDotSet cellCoords hexSide)
+drawCell cellCoords = lineLoop (makeHexagonDotSet cellCoords hexSide)
