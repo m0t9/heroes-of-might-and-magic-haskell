@@ -168,7 +168,7 @@ rangeAttack
 rangeAttack unit1@(Unit _ state1) unit2@(Unit _ state2) coords = do
   let isClose = length (getPath (getCoords state1) (getCoords state2)) - 1 <= 1
   if isClose || getCurrentAmmo state2 <= 0
-    then (parryAttackWrapper (meleeAttackWithMultiplier 0.5)) unit1 unit2 coords
+    then (counterAttackAttackWrapper (meleeAttackWithMultiplier 0.5)) unit1 unit2 coords
     else do
       attackResult@(AttackResult damager victim) <- meleeAttack unit1 unit2 (getCoords state1)
 
@@ -178,13 +178,13 @@ rangeAttack unit1@(Unit _ state1) unit2@(Unit _ state2) coords = do
           return (AttackResult (Just (Unit damagerType newDamageState)) victim)
         Nothing -> return attackResult
 
-parryAttackWrapper :: (Unit -> Unit -> Coords -> JavaRandom AttackResult) -> Unit -> Unit -> Coords -> JavaRandom AttackResult
-parryAttackWrapper func unit1 unit2 attackCoords = do
+counterAttackAttackWrapper :: (Unit -> Unit -> Coords -> JavaRandom AttackResult) -> Unit -> Unit -> Coords -> JavaRandom AttackResult
+counterAttackAttackWrapper func unit1 unit2 attackCoords = do
     firstAttack <- func unit1 unit2 attackCoords
-    parryIfPossibleFunc firstAttack
+    counterAttackIfPossibleFunc firstAttack
   where
-    parryIfPossibleFunc :: AttackResult -> JavaRandom AttackResult
-    parryIfPossibleFunc attackResult@(AttackResult damager victim) = fromMaybe defaultValue maybeValue
+    counterAttackIfPossibleFunc :: AttackResult -> JavaRandom AttackResult
+    counterAttackIfPossibleFunc attackResult@(AttackResult damager victim) = fromMaybe defaultValue maybeValue
       where
         defaultValue = return attackResult
         maybeValue = do
@@ -195,19 +195,19 @@ parryAttackWrapper func unit1 unit2 attackCoords = do
 
 getAttackFunc :: UnitType -> (Unit -> Unit -> Coords -> JavaRandom AttackResult)
 -- ||| Castle fraction
-getAttackFunc Pikeman      = parryAttackWrapper meleeAttack
-getAttackFunc Swordsman    = parryAttackWrapper meleeAttack
+getAttackFunc Pikeman      = counterAttackAttackWrapper meleeAttack
+getAttackFunc Swordsman    = counterAttackAttackWrapper meleeAttack
 getAttackFunc Archer       = rangeAttack
 getAttackFunc Monk         = rangeAttack
 -- ||| Rampart fraction
-getAttackFunc Dwarf        = parryAttackWrapper meleeAttack
+getAttackFunc Dwarf        = counterAttackAttackWrapper meleeAttack
 getAttackFunc WoodElf      = rangeAttack
-getAttackFunc DenroidGuard = parryAttackWrapper meleeAttack
+getAttackFunc DenroidGuard = counterAttackAttackWrapper meleeAttack
 -- ||| Dungeon fraction
-getAttackFunc Troglodyte   = parryAttackWrapper meleeAttack
+getAttackFunc Troglodyte   = counterAttackAttackWrapper meleeAttack
 getAttackFunc Harpy        = rangeAttack
 getAttackFunc Beholder     = rangeAttack
-getAttackFunc Minotaur     = parryAttackWrapper meleeAttack
+getAttackFunc Minotaur     = counterAttackAttackWrapper meleeAttack
 
 attack
   :: Unit   -- | Damager
