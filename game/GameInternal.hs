@@ -20,7 +20,7 @@ data UnitType =
   Pikeman | Archer | Swordsman | Monk        -- | Castle fraction
   | Dwarf | WoodElf | DenroidGuard           -- | Rampart fraction
   | Troglodyte | Harpy | Beholder | Minotaur -- | Dungeon fraction
-data UnitProps = UnitProps {getAttackPoints :: Int, getDefensePoints :: Int, getDamage :: [Int], getHealth :: Int, getSpeed :: Int, getAmmo :: Int}
+data UnitProps = UnitProps {getAttackPoints :: Int, getDefensePoints :: Int, getDamage :: [Int], getHealth :: Int, getSpeed :: Int, getAmmo :: Int, isFlying :: Bool}
 
 data UnitState = UnitState {getProps :: UnitProps, getPlayer :: Player, getCoords :: Coords, getHealthOfLast :: Int, getCurrentAmmo :: Int, getStackSize :: Int}
 
@@ -43,19 +43,19 @@ changeStateCurrentAmmo state ammo = UnitState (getProps state) (getPlayer state)
 -- | Initial properties
 getInitialProps :: UnitType -> UnitProps
 -- || Castle fraction
-getInitialProps Pikeman   = UnitProps 4 5 [1..3] 10 4 0      -- Tier 1
-getInitialProps Archer    = UnitProps 6 3 [2..3] 10 4 12     -- Tier 2
-getInitialProps Swordsman = UnitProps 6 3 [2..3] 10 4 12     -- Tier 4
-getInitialProps Monk      = UnitProps 12 7 [10..12] 30 4 12  -- Tier 5
+getInitialProps Pikeman   = UnitProps 4 5 [1..3] 10 4 0 False      -- Tier 1
+getInitialProps Archer    = UnitProps 6 3 [2..3] 10 4 12 False     -- Tier 2
+getInitialProps Swordsman = UnitProps 6 3 [2..3] 10 4 12 False     -- Tier 4
+getInitialProps Monk      = UnitProps 12 7 [10..12] 30 4 12 False  -- Tier 5
 -- || Rampart fraction
-getInitialProps Dwarf        = UnitProps 6 3 [2..3] 10 4 12     -- Tier 2
-getInitialProps WoodElf      = UnitProps 9 5 [3..5] 15 6 24     -- Tier 3
-getInitialProps DenroidGuard = UnitProps 9 12 [10..14] 55 3 0   -- Tier 5
+getInitialProps Dwarf        = UnitProps 6 3 [2..3] 10 4 12 False    -- Tier 2
+getInitialProps WoodElf      = UnitProps 9 5 [3..5] 15 6 24 False    -- Tier 3
+getInitialProps DenroidGuard = UnitProps 9 12 [10..14] 55 3 0 False  -- Tier 5
 -- || Dungeon fraction
-getInitialProps Troglodyte = UnitProps 4 3 [1..3] 5 4 0       -- Tier 2
-getInitialProps Harpy      = UnitProps 9 5 [3..5] 15 6 24     -- Tier 3
-getInitialProps Beholder   = UnitProps 9 12 [10..14] 55 3 0   -- Tier 5
-getInitialProps Minotaur   = UnitProps 9 12 [10..14] 55 3 0   -- Tier 5
+getInitialProps Troglodyte = UnitProps 4 3 [1..3] 5 4 0 False      -- Tier 2
+getInitialProps Harpy      = UnitProps 9 5 [3..5] 15 6 24 True     -- Tier 3
+getInitialProps Beholder   = UnitProps 9 12 [10..14] 55 3 0 False  -- Tier 5
+getInitialProps Minotaur   = UnitProps 9 12 [10..14] 55 3 0 False  -- Tier 5
 
 -- | Attack strategies
 
