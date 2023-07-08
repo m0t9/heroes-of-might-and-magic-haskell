@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# HLINT ignore "Use tuple-section" #-}
+{-# LANGUAGE DeriveFunctor #-}
 module Random where
 
 import Control.Monad (ap)
