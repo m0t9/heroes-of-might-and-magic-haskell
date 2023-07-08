@@ -26,16 +26,26 @@ vertexInVertices vertex@(Vertex {vertexLabel = label'}) (x:y) =
   (label' == vertexLabel x) || vertexInVertices vertex y
 
 -- Get list of vertices for given labels
-graphVertices :: Graph -> [Coords]-> [Vertex]
+graphVertices 
+  :: Graph      -- Given graph
+  -> [Coords]   -- Given labels (coordinates)
+  -> [Vertex] 
 graphVertices (Graph []) _ = []
 graphVertices (Graph (x:y)) [] = x : y
 graphVertices (Graph (x:y)) keys = filter (\ z -> vertexLabel z `elem` keys) (x:y)
 
 -- BFS
-bfs :: Graph -> Graph -> [Vertex] -> [Vertex] -> (Coords -> Bool) -> Graph
+bfs 
+  :: Graph              -- Graph traverse to
+  -> Graph              -- Traverse tree that will be returned
+  -> [Vertex]           -- Vertices to visit
+  -> [Vertex]           -- Seen vertices
+  -> (Coords -> Bool)   -- Dynamic check are the coordinates of vertex impassable
+  -> Graph
 bfs (Graph []) _ _ _ _ = Graph []
 bfs _ outGraph [] _ _ = outGraph
-bfs (Graph (a:b)) (Graph (c:d)) (e:f) (g:h) isObstacle' = bfs inGraph outGraph queue seen' isObstacle'
+bfs (Graph (a:b)) (Graph (c:d)) (e:f) (g:h) isObstacle' 
+  = bfs inGraph outGraph queue seen' isObstacle'
   where 
     inGraph = Graph (a:b)
     eLabel = vertexLabel e
@@ -48,37 +58,58 @@ bfs (Graph (a:b)) (Graph (c:d)) (e:f) (g:h) isObstacle' = bfs inGraph outGraph q
     outGraph = Graph $ (c:d) ++ enqueue
     queue = f ++ enqueue
     seen' = seen ++ enqueue
+bfs g _ _ _ _ = g
 
 -- Omit improper vertices (and obstacles)
-filterVertexNeighbors :: [Vertex] -> [Vertex] -> (Coords -> Bool) -> [Vertex]
+filterVertexNeighbors 
+  :: [Vertex]           -- Full list of vertices
+  -> [Vertex]           -- List of vertices to find neighbors for
+  -> (Coords -> Bool)   -- Dynamic check are the coordinates of vertex impassable
+  -> [Vertex]
 filterVertexNeighbors _ [] _ = []
 filterVertexNeighbors [] _ _ = []
 filterVertexNeighbors s vn isObstacle' = 
   filter (\ x -> not (vertexInVertices x s) && not (isObstacle x) && not (isObstacle' (vertexLabel x))) vn
 
--- Reset graph for BFS
-resetGraph :: Graph -> Graph
-resetGraph (Graph vertices) =
-  Graph $ map (\ (Vertex lbl ngb _ _ obs) -> Vertex lbl ngb 0 noPredecessor obs) vertices
+-- Reset graph for BFS (set distance 0, set noPredecessor)
+resetGraph 
+  :: Graph  -- Given graph
+  -> Graph
+resetGraph (Graph vs) =
+  Graph $ map (\ (Vertex lbl ngb _ _ obs) -> Vertex lbl ngb 0 noPredecessor obs) vs
 
 -- Change predecessors and distance
-updateDistPred :: [Vertex] -> Int -> Coords -> [Vertex]
+updateDistPred 
+  :: [Vertex]     -- Vertices to update predecessor and distance
+  -> Int          -- Distance to set
+  -> Coords       -- Predecessor label
+  -> [Vertex]
 updateDistPred [] _ _ = []
 updateDistPred (x:y) dist predLabel = map (\ (Vertex label n _ _ o) -> Vertex label n dist predLabel o) (x:y)
 
 -- Get vertex from graph
-getVertex :: Graph -> Coords -> Maybe Vertex
+getVertex 
+  :: Graph          -- Given graph
+  -> Coords         -- Label (coords) of vertex
+  -> Maybe Vertex
 getVertex (Graph []) _ = Nothing
 getVertex (Graph (x : xs)) c = 
   if vertexLabel x == c then Just x
   else getVertex (Graph xs) c
 
 -- Extract vertices from graph
-getVertices :: Graph -> [Vertex]
+getVertices 
+  :: Graph      -- Graph to extract vertices
+  -> [Vertex]
 getVertices (Graph v) = v
 
 -- Method to get path from first coords to second
-findPath :: Graph -> Coords -> Coords -> (Coords -> Bool) -> Maybe [Coords]
+findPath 
+  :: Graph            -- Graph to find path on int
+  -> Coords           -- Vertex start on
+  -> Coords           -- Vertex finish on
+  -> (Coords -> Bool) -- Dynamic check are the coordinates of vertex impassable
+  -> Maybe [Coords]
 findPath g f t isObstacle' = 
   if null (graphVertices tree [t])
     then Nothing
@@ -90,19 +121,25 @@ findPath g f t isObstacle' =
     tree = bfs cleanGraph outGraph queue queue isObstacle'
 
     find :: Coords -> [Vertex] -> Maybe Vertex
-    find x [] = Nothing
+    find _ [] = Nothing
     find x (y : ys) = if x == vertexLabel y then Just y else find x ys
     
-    buildPath t p = case find t p of
+    buildPath t' p = case find t' p of
       Nothing -> []
       Just v -> vertexLabel v : buildPath (vertexPredecessor v) p
 
 -- Method to filter list of coords s.t. (0 <= x < w, 0 <= y < h)
-filterNeighbours :: Int -> Int -> [Coords] -> [Coords]
+filterNeighbours 
+  :: Int          -- Width of field
+  -> Int          -- Height of field
+  -> [Coords]     -- Not filtered neighbours
+  -> [Coords]
 filterNeighbours w h = filter (\(x, y) -> (0 <= x && x < w) && (0 <= y && y < h))
 
 -- Generate neighbours 
-generateNeighbours :: Coords -> [Coords]
+generateNeighbours 
+  :: Coords     -- Label (coordinates) of vertex to find neighbours for
+  -> [Coords]
 generateNeighbours (x, y) = if odd y 
   then [
     (x - 1, y), (x - 1, y - 1), (x, y - 1), 
@@ -112,7 +149,11 @@ generateNeighbours (x, y) = if odd y
       (x + 1, y + 1), (x, y + 1), (x - 1, y)]
 
 -- Generate vertex on given field with WIDTH and HEIGHT
-genVertex :: Int -> Int -> Coords -> Vertex
+genVertex 
+  :: Int        -- Width of field
+  -> Int        -- Height of field
+  -> Coords     -- Label (coordinates) of vertex
+  -> Vertex
 genVertex width height coords = 
   Vertex 
     coords 
@@ -122,8 +163,12 @@ genVertex width height coords =
     False
 
 -- Method to generate field with given X and Y sizes (w/o obstacles)
-generateGraph :: Int -> Int -> Graph
-generateGraph width height = Graph graphVertices
+generateGraph 
+  :: Int      -- Width of field
+  -> Int      -- Height of field
+  -> Graph    
+generateGraph width height = Graph gVertices
   where
     points = concatMap (\ x -> zip (repeat x) (take height [0 .. ])) (take width [0 .. ])
-    graphVertices = map (genVertex width height) points
+    gVertices = map (genVertex width height) points
+    
