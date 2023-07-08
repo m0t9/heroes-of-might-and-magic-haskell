@@ -5,6 +5,7 @@ packages:
 
 extra-deps:
   - gloss-1.13.2.2
+  - GLUT-2.7.0.16
 
 ghc-options:
   "$locals": -Wall -fno-warn-type-defaults

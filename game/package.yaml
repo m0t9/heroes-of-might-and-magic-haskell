@@ -3,12 +3,14 @@ name: game
 custom-setup:
   dependencies:
     - gloss
+    - GLUT
     - base
     - Cabal
 
 dependencies:
   - base >= 4.7 && < 5
   - gloss
+  - GLUT
 
 ghc-options:
   - -threaded

@@ -11,6 +11,13 @@ packages:
       size: 3807
   original:
     hackage: gloss-1.13.2.2
+- completed:
+    hackage: GLUT-2.7.0.16@sha256:a7da60bef0d06eb501a2abd0d5068a89fa2c2daf5fee4b607df62395543ba6b0,24054
+    pantry-tree:
+      sha256: 31d1c5020333d3f38db96d88e2a229da7f73ef95174be286a67a09525f9aefd9
+      size: 9538
+  original:
+    hackage: GLUT-2.7.0.16
 snapshots:
 - completed:
     sha256: 4c972e067bae16b95961dbfdd12e07f1ee6c8fffabbfa05c3d65100b03f548b7
