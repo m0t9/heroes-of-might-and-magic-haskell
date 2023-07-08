@@ -6,7 +6,27 @@ isInHex (x, y) (xHexCenter, yHexCenter) side
   | otherwise                                                                           = True
 
 
-coordsToHex :: (Double, Double) -> (Double, Double) -> Double -> Maybe (Int, Int)
+coordsToHexWithDomain 
+  :: (Double, Double) 
+  -> (Double, Double) 
+  -> Double 
+  -> (Int, Int) 
+  -> Maybe (Int, Int)
+coordsToHexWithDomain offsetSize coords side (xMaxHex, yMaxHex) 
+  = case coordsToHex offsetSize coords side of
+      Nothing -> Nothing
+      Just (x, y) -> result
+        where
+          result
+            | (x > xMaxHex) || (y > yMaxHex) = Nothing
+            | otherwise                      = Just (x, y)  
+
+
+coordsToHex 
+  :: (Double, Double) 
+  -> (Double, Double) 
+  -> Double 
+  -> Maybe (Int, Int)
 coordsToHex (xOffset, yOffset) (x, y) side
   | (xCoord < xOffset) || (yCoord < yOffset) = Nothing
   | otherwise                  = result
@@ -18,17 +38,13 @@ coordsToHex (xOffset, yOffset) (x, y) side
     x2 = floor ((xCoord+sqrtSide) / (sqrtSide*2))
     y1 = floor (yCoord / side)
     y2 = floor ((yCoord + (side / 2)) / side)
-    getCenter :: (Int, Int) -> (Double, Double)
-    getCenter (xCrd, yCrd) = hexToCoords offset (xCrd, yCrd) side
-    center1 = getCenter (x1, y1)
-    center2 = getCenter (x2, y1)
-    center3 = getCenter (x1, y2)
-    center4 = getCenter (x2, y2)
-    checkAttachment :: (Double, Double) -> Bool
-    checkAttachment centerCoords = isInHex (x, y) centerCoords side 
+    isDotInHexagon :: (Int, Int) -> Bool
+    isDotInHexagon (xHex, yHex) = isInHex (x, y) centerCoords side
+      where
+        centerCoords = hexToCoords offset (xHex, yHex) side
     result 
-      | checkAttachment center1 = Just (x1, y1)
-      | checkAttachment center2 = Just (x2, y1)
-      | checkAttachment center3 = Just (x1, y2)
-      | checkAttachment center4 = Just (x2, y2)
+      | isDotInHexagon (x1, y1) = Just (x1, y1)
+      | isDotInHexagon (x2, y1) = Just (x2, y1)
+      | isDotInHexagon (x1, y2) = Just (x1, y2)
+      | isDotInHexagon (x2, y2) = Just (x2, y2)
       | otherwise               = Nothing
