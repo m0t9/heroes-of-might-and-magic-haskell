@@ -37,8 +37,9 @@ type Field = Picture
 
 drawField :: CellCoords -> FieldSize -> Picture
 drawField (x, y) (xF, yF) 
-  | x < xF = drawField (x+1, y) (xF, yF) <> drawCell (x, y)
-  | otherwise = drawField (0, y+1) (xF, yF)
+  | (x == xF && y == yF) = drawCell (x, y)
+  | (x == xF) = drawField (0, y+1) (xF, yF) <> drawCell (x, y)
+  | otherwise = drawField (x+1, y) (xF, yF) <> drawCell (x, y)
 
 drawCell :: CellCoords -> Field
 drawCell cellCoords = polygon (makeHexagonDotSet cellCoords hexSide)
