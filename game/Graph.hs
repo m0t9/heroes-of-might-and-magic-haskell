@@ -17,7 +17,7 @@ data Vertex = Vertex {
                       } deriving (Show)
 
 -- Graph description
-newtype Graph = Graph [Vertex] deriving (Show)
+newtype Graph = Graph {vertices :: [Vertex]} deriving (Show)
 
 -- Check whether vertex in list of vertices
 vertexInVertices :: Vertex -> [Vertex] -> Bool
@@ -81,7 +81,7 @@ findPath :: Graph -> Coords -> Coords -> Maybe [Coords]
 findPath g f t = 
   if null (graphVertices tree [t])
     then Nothing
-    else Just (f : buildPath t (graphVertices tree [t]))
+    else Just (reverse (buildPath t (vertices tree)))
   where
     queue = graphVertices cleanGraph [f]
     outGraph = Graph queue
@@ -95,3 +95,34 @@ findPath g f t =
     buildPath t p = case find t p of
       Nothing -> []
       Just v -> vertexLabel v : buildPath (vertexPredecessor v) p
+
+-- Method to filter list of coords s.t. (0 <= x < w, 0 <= y < h)
+filterNeighbours :: Int -> Int -> [Coords] -> [Coords]
+filterNeighbours w h = filter (\(x, y) -> (0 <= x && x < w) && (0 <= y && y < h))
+
+-- Generate neighbours 
+generateNeighbours :: Coords -> [Coords]
+generateNeighbours (x, y) = if odd y 
+  then [
+    (x - 1, y), (x - 1, y - 1), (x, y - 1), 
+    (x + 1, y), (x, y + 1), (x - 1, y + 1)]
+  else
+    [(x, y - 1), (x + 1, y - 1), (x + 1, y),
+      (x + 1, y + 1), (x, y + 1), (x - 1, y)]
+
+-- Generate vertex on given field with WIDTH and HEIGHT
+genVertex :: Int -> Int -> Coords -> Vertex
+genVertex width height coords = 
+  Vertex 
+    coords 
+    (filterNeighbours width height (generateNeighbours coords)) 
+    0 
+    noPredecessor 
+    False
+
+-- Method to generate field with given X and Y sizes (w/o obstacles)
+generateGraph :: Int -> Int -> Graph
+generateGraph width height = Graph vertices
+  where
+    points = concatMap (\ x -> zip (repeat x) (take height [0 .. ])) (take width [0 .. ])
+    vertices = map (genVertex width height) points
