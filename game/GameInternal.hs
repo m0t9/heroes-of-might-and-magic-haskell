@@ -214,20 +214,27 @@ attack
   -> Unit   -- | Victim
   -> Coords -- | Coords from which unit will attack
   -> JavaRandom AttackResult
-attack unit1@(Unit unitType _) unit2 coords = do
-  (AttackResult damager victim) <- (getAttackFunc unitType) unit1 unit2 coords
-  return (AttackResult (postAttack unit1 damager) (postDefense unit2 victim))
+attack unit1@(Unit unitType _) unit2 coords = (getAttackFunc unitType) unit1 unit2 coords
 
 postAttack
-  :: Unit       -- | Before unit
-  -> Maybe Unit -- | After unit
-  -> Maybe Unit -- | New unit
+  :: Unit       -- | Unit before attack
+  -> Maybe Unit -- | Unit after attack
+  -> Maybe Unit -- | Final unit
 postAttack _ Nothing = Nothing
 postAttack before@(Unit Harpy _) (Just (Unit Harpy _)) = Just before
 postAttack _ after = after
 
 postDefense
-  :: Unit       -- | Before unit
-  -> Maybe Unit -- | After unit
-  -> Maybe Unit -- | New unit
+  :: Unit       -- | Unit before attack
+  -> Maybe Unit -- | Unit after attack
+  -> Maybe Unit -- | Final unit
 postDefense _ after = after
+
+postAttackHandler
+  :: Unit                    -- | Before unit
+  -> Unit                    -- | After unit
+  -> JavaRandom AttackResult -- | States right after performed attack
+  -> JavaRandom AttackResult -- | Final states after attack
+postAttackHandler unit1 unit2 attackResult' = do
+  (AttackResult damager victim) <- attackResult'
+  return (AttackResult (postAttack unit1 damager) (postDefense unit2 victim))
