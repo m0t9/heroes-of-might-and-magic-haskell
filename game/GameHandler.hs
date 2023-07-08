@@ -1,5 +1,5 @@
 module GameHandler where
-import Graphics 
+import Graphics
 
 isInHex :: DoubleCoords -> DoubleCoords -> Double -> Bool
 isInHex (x, y) (xHexCenter, yHexCenter) side
@@ -7,26 +7,26 @@ isInHex (x, y) (xHexCenter, yHexCenter) side
   | otherwise                                                                           = True
 
 
-coordsToHexWithDomain 
+coordsToHexWithDomain
   :: Offset
   -> DoubleCoords
-  -> Double 
+  -> Double
   -> FieldSize
   -> Maybe CellCoords
-coordsToHexWithDomain offsetSize coords side (xMaxHex, yMaxHex) 
+coordsToHexWithDomain offsetSize coords side (xMaxHex, yMaxHex)
   = case coordsToHex offsetSize coords side of
       Nothing -> Nothing
       Just (x, y) -> result
         where
           result
             | (x > xMaxHex) || (y > yMaxHex) = Nothing
-            | otherwise                      = Just (x, y)  
+            | otherwise                      = Just (x, y)
 
 
-coordsToHex 
+coordsToHex
   :: Offset
   -> DoubleCoords
-  -> Double 
+  -> Double
   -> Maybe CellCoords
 coordsToHex (xOffset, yOffset) (x, y) side
   | (xCoord < xOffset) || (yCoord < yOffset) = Nothing
@@ -43,7 +43,7 @@ coordsToHex (xOffset, yOffset) (x, y) side
     isDotInHexagon (xHex, yHex) = isInHex (x, y) centerCoords side
       where
         centerCoords = hexToCoords offset (xHex, yHex) side
-    result 
+    result
       | isDotInHexagon (x1, y1) = Just (x1, y1)
       | isDotInHexagon (x2, y1) = Just (x2, y1)
       | isDotInHexagon (x1, y2) = Just (x1, y2)
@@ -51,4 +51,26 @@ coordsToHex (xOffset, yOffset) (x, y) side
       | otherwise               = Nothing
 
 
-      
+isAngleMoreThen30InHex :: DoubleCoords -> DoubleCoords -> Bool
+isAngleMoreThen30InHex (xCenter, yCenter) (x, y)
+  | cot > sqrt 3 = False
+  | otherwise    = True
+  where
+    cot = leg1 / leg2
+    leg1 = abs (x - xCenter)
+    leg2 = abs (y - yCenter)
+
+
+determineCellPart :: DoubleCoords -> DoubleCoords -> CellPart
+determineCellPart (x, y) (xCenter, yCenter)
+  | (x > xCenter) && (y > yCenter) && isInVerticalPart            = UR
+  | (x < xCenter) && (y > yCenter) && isInVerticalPart            = UL
+  | (x > xCenter) && (y < yCenter) && isInVerticalPart            = DR
+  | (x < xCenter) && (y < yCenter) && isInVerticalPart            = DL
+  | ((x > xCenter) && (y > yCenter) && (not isInVerticalPart))
+    || ((x > xCenter) && (y < yCenter) && (not isInVerticalPart)) = R
+  | otherwise                                                     = L
+    where
+        isInVerticalPart = isAngleMoreThen30InHex (x, y) (xCenter, yCenter)
+
+

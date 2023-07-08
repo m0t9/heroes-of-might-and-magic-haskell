@@ -37,7 +37,7 @@ type Offset = (Double, Double)
 type CellCoords = (Int, Int)
 type Field = Picture
 type DoubleCoords = (Double, Double)
-data CellPart = UpRight | UpLeft | Left | DownLeft | DownRight | Right 
+data CellPart = UR | UL | L | DL | DR | R 
 drawField :: CellCoords -> FieldSize -> Picture
 drawField (x, y) (xF, yF) 
   | (x == xF && y == yF) = drawCell (x, y)
