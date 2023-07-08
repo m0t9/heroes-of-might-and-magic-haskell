@@ -12,7 +12,7 @@ import Control.Monad (replicateM)
 import GHC.Float (int2Double)
 
 -- | Game related data types
-data GameState = GameState {getUnits :: [Unit]}
+data GameState = GameState {getUnits :: [Unit], turn :: Player}
 data Player = Player Bool deriving (Eq)
 
 -- | Unit related data types
@@ -89,25 +89,25 @@ filterEnemy player = filter (\(Unit _ state) -> getPlayer state /= player)
 filterEnemyWrapper :: (GameState -> Unit -> [Unit]) -> GameState -> Unit -> [Unit]
 filterEnemyWrapper func gameState unit@(Unit _ state) = filterEnemy (getPlayer state) (func gameState unit)
 
-getAttackableEntitiesFunc :: UnitType -> (GameState -> Unit -> [Unit])
+getInteractableEntitiesFunc :: UnitType -> (GameState -> Unit -> [Unit])
 -- ||| Castle fraction
-getAttackableEntitiesFunc Pikeman      = filterEnemyWrapper getMeleeAttackableEntities
-getAttackableEntitiesFunc Swordsman    = filterEnemyWrapper getMeleeAttackableEntities
-getAttackableEntitiesFunc Archer       = filterEnemyWrapper getRangedAttackableEntities
-getAttackableEntitiesFunc Monk         = filterEnemyWrapper getRangedAttackableEntities
+getInteractableEntitiesFunc Pikeman      = filterEnemyWrapper getMeleeAttackableEntities
+getInteractableEntitiesFunc Swordsman    = filterEnemyWrapper getMeleeAttackableEntities
+getInteractableEntitiesFunc Archer       = filterEnemyWrapper getRangedAttackableEntities
+getInteractableEntitiesFunc Monk         = filterEnemyWrapper getRangedAttackableEntities
 -- ||| Rampart fraction
-getAttackableEntitiesFunc Dwarf        = filterEnemyWrapper getMeleeAttackableEntities
-getAttackableEntitiesFunc WoodElf      = filterEnemyWrapper getRangedAttackableEntities
-getAttackableEntitiesFunc DenroidGuard = filterEnemyWrapper getMeleeAttackableEntities
+getInteractableEntitiesFunc Dwarf        = filterEnemyWrapper getMeleeAttackableEntities
+getInteractableEntitiesFunc WoodElf      = filterEnemyWrapper getRangedAttackableEntities
+getInteractableEntitiesFunc DenroidGuard = filterEnemyWrapper getMeleeAttackableEntities
 -- ||| Dungeon fraction
-getAttackableEntitiesFunc Troglodyte   = filterEnemyWrapper getMeleeAttackableEntities
-getAttackableEntitiesFunc Harpy        = filterEnemyWrapper getRangedAttackableEntities
-getAttackableEntitiesFunc Beholder     = filterEnemyWrapper getMeleeAttackableEntities
-getAttackableEntitiesFunc Minotaur     = filterEnemyWrapper getMeleeAttackableEntities
+getInteractableEntitiesFunc Troglodyte   = filterEnemyWrapper getMeleeAttackableEntities
+getInteractableEntitiesFunc Harpy        = filterEnemyWrapper getRangedAttackableEntities
+getInteractableEntitiesFunc Beholder     = filterEnemyWrapper getMeleeAttackableEntities
+getInteractableEntitiesFunc Minotaur     = filterEnemyWrapper getMeleeAttackableEntities
 
 -- ||| Strategies for each unit
-getAttackableEntities :: GameState -> Unit -> [Unit]
-getAttackableEntities gameState unit@(Unit unitType _) = (getAttackableEntitiesFunc unitType) gameState unit
+getInteractableEntities :: GameState -> Unit -> [Unit]
+getInteractableEntities gameState unit@(Unit unitType _) = (getInteractableEntitiesFunc unitType) gameState unit
 
 
 data AttackResult = AttackResult {getDamager :: Maybe Unit, getVictim :: Maybe Unit}
