@@ -1,6 +1,6 @@
 module Graphics where
 import Graphics.Gloss
-hexToCoords:: (Double, Double) -> (Int, Int) -> Double -> (Double, Double)
+hexToCoords:: Offset -> CellCoords -> Double -> DoubleCoords
 hexToCoords (xOffset, yOffset) (xHex, yHex) side =
   (xOffset + xShift, yOffset + yShift)
   where
@@ -13,10 +13,10 @@ hexToCoords (xOffset, yOffset) (xHex, yHex) side =
 
 offset = (1.6, 2.5)
 hexSide = 2.4
-currentConversion :: (Int, Int) -> (Double, Double)
+currentConversion :: CellCoords -> DoubleCoords
 currentConversion hexCoords = hexToCoords offset hexCoords hexSide  
 
-makeHexagonDotSet :: (Int, Int) -> Double -> [(Float, Float)]
+makeHexagonDotSet :: CellCoords -> Double -> [(Float, Float)]
 makeHexagonDotSet hexCoords side =
    [up, upRight, downRight, down, downLeft, upLeft]
      where
@@ -34,6 +34,7 @@ type FieldSize = (Int, Int)
 type Offset = (Double, Double)
 type CellCoords = (Int, Int)
 type Field = Picture
+type DoubleCoords = (Double, Double)
 
 drawField :: CellCoords -> FieldSize -> Picture
 drawField (x, y) (xF, yF) 

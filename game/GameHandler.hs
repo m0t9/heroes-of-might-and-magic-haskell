@@ -1,17 +1,18 @@
 module GameHandler where
-import Graphics
-isInHex :: (Double, Double) -> (Double, Double) -> Double -> Bool
+import Graphics 
+
+isInHex :: DoubleCoords -> DoubleCoords -> Double -> Bool
 isInHex (x, y) (xHexCenter, yHexCenter) side
   | (((x-xHexCenter)*(x-xHexCenter)) + ((y-yHexCenter) * (y-yHexCenter))) > (side*side) = False
   | otherwise                                                                           = True
 
 
 coordsToHexWithDomain 
-  :: (Double, Double) 
-  -> (Double, Double) 
+  :: Offset
+  -> DoubleCoords
   -> Double 
-  -> (Int, Int) 
-  -> Maybe (Int, Int)
+  -> FieldSize
+  -> Maybe CellCoords
 coordsToHexWithDomain offsetSize coords side (xMaxHex, yMaxHex) 
   = case coordsToHex offsetSize coords side of
       Nothing -> Nothing
@@ -23,10 +24,10 @@ coordsToHexWithDomain offsetSize coords side (xMaxHex, yMaxHex)
 
 
 coordsToHex 
-  :: (Double, Double) 
-  -> (Double, Double) 
+  :: Offset
+  -> DoubleCoords
   -> Double 
-  -> Maybe (Int, Int)
+  -> Maybe CellCoords
 coordsToHex (xOffset, yOffset) (x, y) side
   | (xCoord < xOffset) || (yCoord < yOffset) = Nothing
   | otherwise                  = result
@@ -38,7 +39,7 @@ coordsToHex (xOffset, yOffset) (x, y) side
     x2 = floor ((xCoord+sqrtSide) / (sqrtSide*2))
     y1 = floor (yCoord / side)
     y2 = floor ((yCoord + (side / 2)) / side)
-    isDotInHexagon :: (Int, Int) -> Bool
+    isDotInHexagon :: CellCoords -> Bool
     isDotInHexagon (xHex, yHex) = isInHex (x, y) centerCoords side
       where
         centerCoords = hexToCoords offset (xHex, yHex) side
