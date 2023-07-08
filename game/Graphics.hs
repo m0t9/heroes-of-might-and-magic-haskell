@@ -1,4 +1,5 @@
 module Graphics where
+import Graphics.Gloss
 hexToCoords:: (Double, Double) -> (Int, Int) -> Double -> (Double, Double)
 hexToCoords (xOffset, yOffset) (xHex, yHex) side =
   (xOffset + xShift, yOffset + yShift)
@@ -15,16 +16,29 @@ hexSide = 2.4
 currentConversion :: (Int, Int) -> (Double, Double)
 currentConversion hexCoords = hexToCoords offset hexCoords hexSide  
 
-makeHexagonDotSet :: (Int, Int) -> Double -> [(Double, Double)]
+makeHexagonDotSet :: (Int, Int) -> Double -> [(Float, Float)]
 makeHexagonDotSet hexCoords side =
    [up, upRight, downRight, down, downLeft, upLeft]
      where
       (x, y) = currentConversion hexCoords
       halfSide = side/2
       sqrtSide = side * (sqrt 3) /2
-      up = (x, y+side)
-      upRight = (x + sqrtSide, y + halfSide)
-      downRight = (x + sqrtSide, y - halfSide)
-      down = (x, y-side)
-      downLeft = (x - sqrtSide, y - halfSide)
-      upLeft = (x - sqrtSide, y + halfSide)
+      up = (realToFrac x, realToFrac (y+side))
+      upRight = (realToFrac (x + sqrtSide), realToFrac(y + halfSide))
+      downRight = (realToFrac (x + sqrtSide), realToFrac(y - halfSide))
+      down = (realToFrac x, realToFrac(y-side))
+      downLeft = (realToFrac (x - sqrtSide), realToFrac(y - halfSide))
+      upLeft = (realToFrac(x - sqrtSide), realToFrac(y + halfSide))
+
+type FieldSize = (Int, Int)
+type Offset = (Double, Double)
+type CellCoords = (Int, Int)
+type Field = Picture
+
+drawField :: CellCoords -> FieldSize -> Picture
+drawField (x, y) (xF, yF) 
+  | x < xF = drawField (x+1, y) (xF, yF) <> drawCell (x, y)
+  | otherwise = drawField (0, y+1) (xF, yF)
+
+drawCell :: CellCoords -> Field
+drawCell cellCoords = polygon (makeHexagonDotSet cellCoords hexSide)
