@@ -3,6 +3,7 @@
 {-# HLINT ignore "Redundant bracket" #-}
 {-# HLINT ignore "Eta reduce" #-}
 {-# HLINT ignore "Use newtype instead of data" #-}
+{-# HLINT ignore "Use <$>" #-}
 module GameInternal where
 import Utils (getPath, sign)
 import Random (JavaRandom, randomInt)
@@ -34,6 +35,9 @@ changeStateHealthOfLast state health = UnitState (getProps state) (getPlayer sta
 
 changeStateStackSize :: UnitState -> Int -> UnitState
 changeStateStackSize state stackSize = UnitState (getProps state) (getPlayer state) (getCoords state) (getHealthOfLast state) (getCurrentAmmo state) (stackSize)
+
+changeStateCurrentAmmo :: UnitState -> Int -> UnitState
+changeStateCurrentAmmo state ammo = UnitState (getProps state) (getPlayer state) (getCoords state) (getHealthOfLast state) (ammo) (getStackSize state)
 
 
 -- | Initial properties
@@ -106,10 +110,14 @@ getAttackableEntities :: GameState -> Unit -> [Unit]
 getAttackableEntities gameState unit@(Unit unitType _) = (getAttackableEntitiesFunc unitType) gameState unit
 
 
-data AttackResult = AttackResult {getDamager :: Unit, getVictim :: Maybe Unit}
+data AttackResult = AttackResult {getDamager :: Maybe Unit, getVictim :: Maybe Unit}
 
 -- | Attack functions
-meleeAttackWithMultiplier :: Double -> Unit -> Unit -> JavaRandom AttackResult
+meleeAttackWithMultiplier
+  :: Double -- | Damager multiplier
+  -> Unit   -- | Damager
+  -> Unit   -- | Victim
+  -> JavaRandom AttackResult
 meleeAttackWithMultiplier coefficient unit1@(Unit _ state1) (Unit unitType2 state2) = do
   let stackSize = getStackSize state1
   let damage = getDamage (getProps state1)
@@ -130,7 +138,7 @@ meleeAttackWithMultiplier coefficient unit1@(Unit _ state1) (Unit unitType2 stat
   let totalHealth = (getHealthOfLast state2) + (getStackSize state2 - 1) * health2
 
   if totalHealth == 0
-    then return (AttackResult (unit1) (Nothing))
+    then return (AttackResult (Just unit1) (Nothing))
     else do
       let finalHealth = finalDamage - totalHealth
       let temp = finalHealth `mod` health2
@@ -140,23 +148,31 @@ meleeAttackWithMultiplier coefficient unit1@(Unit _ state1) (Unit unitType2 stat
 
       let newState2 = changeStateStackSize (changeStateHealthOfLast state2 newHealthOfLast) newStackSize
 
-      return (AttackResult (unit1) (Just (Unit unitType2 newState2)))
+      return (AttackResult (Just unit1) (Just (Unit unitType2 newState2)))
 
 
-meleeAttack :: Unit -> Unit -> JavaRandom AttackResult
+meleeAttack
+  :: Unit -- | Damager
+  -> Unit -- | Victim
+  -> JavaRandom AttackResult
 meleeAttack = meleeAttackWithMultiplier 1.0
 
-rangeAttack :: Unit -> Unit -> JavaRandom AttackResult
+rangeAttack
+  :: Unit -- | Damager
+  -> Unit -- | Victim
+  -> JavaRandom AttackResult
 rangeAttack unit1@(Unit _ state1) unit2@(Unit _ state2) = do
   let isClose = length (getPath (getCoords state1) (getCoords state2)) - 1 <= 1
   if isClose || getCurrentAmmo state2 <= 0
     then (parryAttackWrapper (meleeAttackWithMultiplier 0.5)) unit1 unit2
     else do
-      (AttackResult (Unit damagerType damagerState) victim) <- meleeAttack unit1 unit2
+      attackResult@(AttackResult damager victim) <- meleeAttack unit1 unit2
 
-      let newDamageState = UnitState (getProps damagerState) (getPlayer damagerState) (getCoords damagerState) (getHealthOfLast damagerState) (getCurrentAmmo damagerState - 1) (getStackSize damagerState)
-
-      return (AttackResult (Unit damagerType newDamageState) victim)
+      case damager of
+        Just (Unit damagerType damagerState) -> do
+          let newDamageState = changeStateCurrentAmmo damagerState (getCurrentAmmo damagerState - 1)
+          return (AttackResult (Just (Unit damagerType newDamageState)) victim)
+        Nothing -> return attackResult
 
 parryAttackWrapper :: (Unit -> Unit -> JavaRandom AttackResult) -> Unit -> Unit -> JavaRandom AttackResult
 parryAttackWrapper func unit1 unit2 = do
@@ -167,7 +183,10 @@ parryAttackWrapper func unit1 unit2 = do
     parryIfPossibleFunc attackResult@(AttackResult damager victim) = fromMaybe defaultValue maybeValue
       where
         defaultValue = return attackResult
-        maybeValue = meleeAttack damager <$> victim
+        maybeValue = do
+          victimValue <- victim
+          damagerValue <- damager
+          return (attack victimValue damagerValue)
 
 
 getAttackFunc :: UnitType -> (Unit -> Unit -> JavaRandom AttackResult)
@@ -186,10 +205,24 @@ getAttackFunc Harpy        = rangeAttack
 getAttackFunc Beholder     = rangeAttack
 getAttackFunc Minotaur     = parryAttackWrapper meleeAttack
 
-attack :: Unit -> Unit -> JavaRandom AttackResult
-attack unit1@(Unit unitType _) unit2 = (getAttackFunc unitType) unit1 unit2
+attack
+  :: Unit -- | Damager
+  -> Unit -- | Victim
+  -> JavaRandom AttackResult
+attack unit1@(Unit unitType _) unit2 = do
+  (AttackResult damager victim) <- (getAttackFunc unitType) unit1 unit2
+  return (AttackResult (postAttack unit1 damager) (postDefense unit2 victim))
 
-postAttack :: Unit -> Maybe Unit -> Maybe Unit
+postAttack
+  :: Unit       -- | Before unit
+  -> Maybe Unit -- | After unit
+  -> Maybe Unit -- | New unit
 postAttack _ Nothing = Nothing
 postAttack before@(Unit Harpy _) (Just (Unit Harpy _)) = Just before
 postAttack _ after = after
+
+postDefense
+  :: Unit       -- | Before unit
+  -> Maybe Unit -- | After unit
+  -> Maybe Unit -- | New unit
+postDefense _ after = after
