@@ -1,5 +1,7 @@
 module GameHandler where
 import Graphics
+import Graphics.Gloss
+import GameInternal
 
 isInHex :: DoubleCoords -> DoubleCoords -> Double -> Bool
 isInHex (x, y) (xHexCenter, yHexCenter) side
@@ -73,4 +75,10 @@ determineCellPart (x, y) (xCenter, yCenter)
     where
         isInVerticalPart = isAngleMoreThen30InHex (x, y) (xCenter, yCenter)
 
+getCellsToMove :: Unit -> GameState -> [CellCoords]
+getCellsToMove ::
+data State = NoSelected GameState | Selected GameState
 
+gameHandler :: Event -> State -> State 
+gameHandler _event (NoSelected gameState)    = NoSelectedHandler _event ()
+gameHandler _event (Selected gameState unit) = selectedHandler
