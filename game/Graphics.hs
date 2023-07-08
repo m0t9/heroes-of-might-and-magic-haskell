@@ -11,7 +11,9 @@ hexToCoords (xOffset, yOffset) (xHex, yHex) side =
       | even yHex = (sqrt 3) * side * (1 + x) 
       | otherwise = (sqrt 3) * side * (1/2 + x)
 
+offset :: Offset
 offset = (1.6, 2.5)
+hexSide :: Double
 hexSide = 2.4
 currentConversion :: CellCoords -> DoubleCoords
 currentConversion hexCoords = hexToCoords offset hexCoords hexSide  
@@ -35,7 +37,7 @@ type Offset = (Double, Double)
 type CellCoords = (Int, Int)
 type Field = Picture
 type DoubleCoords = (Double, Double)
-
+data CellPart = UpRight | UpLeft | Left | DownLeft | DownRight | Right 
 drawField :: CellCoords -> FieldSize -> Picture
 drawField (x, y) (xF, yF) 
   | (x == xF && y == yF) = drawCell (x, y)
