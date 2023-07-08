@@ -128,6 +128,10 @@ meleeAttackWithMultiplier coefficient unit1@(Unit _ state1) (Unit unitType2 stat
     return (damage !! index)
     )
 
+  let path = getPath (getCoords state1) (getCoords state2)
+
+  let movedState2 = if length path <= 2 then state2 else (changeStateCoords state2 (path !! (length path - 2)))
+
   let totalDamage = int2Double (sum damages) * coefficient
   let i = getAttackPoints (getProps state1) - getDefensePoints (getProps state2)
   let damageCoefficient = (1.0 + 0.1 * (int2Double (sign i))) ^ abs i
@@ -146,7 +150,7 @@ meleeAttackWithMultiplier coefficient unit1@(Unit _ state1) (Unit unitType2 stat
       let newHealthOfLast = if temp == 0 then health2 else temp
       let newStackSize = (finalHealth `div` health2) + (sign temp)
 
-      let newState2 = changeStateStackSize (changeStateHealthOfLast state2 newHealthOfLast) newStackSize
+      let newState2 = changeStateStackSize (changeStateHealthOfLast movedState2 newHealthOfLast) newStackSize
 
       return (AttackResult (Just unit1) (Just (Unit unitType2 newState2)))
 
