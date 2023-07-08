@@ -11,6 +11,9 @@ import Data.Maybe (fromMaybe)
 import Control.Monad (replicateM)
 import GHC.Float (int2Double)
 
+-- | Field coordinates
+type Coords = (Int, Int)
+
 -- | Game related data types
 data GameState = GameState {getUnits :: [Unit]}
 data Player = Player Bool deriving (Eq)
@@ -117,8 +120,9 @@ meleeAttackWithMultiplier
   :: Double -- | Damager multiplier
   -> Unit   -- | Damager
   -> Unit   -- | Victim
+  -> Coords -- | Coordinates to attack from
   -> JavaRandom AttackResult
-meleeAttackWithMultiplier coefficient unit1@(Unit _ state1) (Unit unitType2 state2) = do
+meleeAttackWithMultiplier coefficient unit1@(Unit unitType1 state1) (Unit unitType2 state2) attackCoords = do
   let stackSize = getStackSize state1
   let damage = getDamage (getProps state1)
 
@@ -128,10 +132,6 @@ meleeAttackWithMultiplier coefficient unit1@(Unit _ state1) (Unit unitType2 stat
     return (damage !! index)
     )
 
-  let path = getPath (getCoords state1) (getCoords state2)
-
-  let movedState2 = if length path <= 2 then state2 else (changeStateCoords state2 (path !! (length path - 2)))
-
   let totalDamage = int2Double (sum damages) * coefficient
   let i = getAttackPoints (getProps state1) - getDefensePoints (getProps state2)
   let damageCoefficient = (1.0 + 0.1 * (int2Double (sign i))) ^ abs i
@@ -140,37 +140,40 @@ meleeAttackWithMultiplier coefficient unit1@(Unit _ state1) (Unit unitType2 stat
 
   let health2 = (getHealth (getProps state2))
   let totalHealth = (getHealthOfLast state2) + (getStackSize state2 - 1) * health2
+  let finalHealth = finalDamage - totalHealth
 
-  if totalHealth == 0
-    then return (AttackResult (Just unit1) (Nothing))
+  let movedUnit1 = Unit unitType1 (changeStateCoords state1 attackCoords)
+
+  if finalHealth <= 0
+    then return (AttackResult (Just movedUnit1) (Nothing))
     else do
-      let finalHealth = finalDamage - totalHealth
       let temp = finalHealth `mod` health2
 
       let newHealthOfLast = if temp == 0 then health2 else temp
       let newStackSize = (finalHealth `div` health2) + (sign temp)
 
-      let newState2 = changeStateStackSize (changeStateHealthOfLast movedState2 newHealthOfLast) newStackSize
+      let newState2 = changeStateStackSize (changeStateHealthOfLast state2 newHealthOfLast) newStackSize
 
-      return (AttackResult (Just unit1) (Just (Unit unitType2 newState2)))
-
+      return (AttackResult (Just movedUnit1) (Just (Unit unitType2 newState2)))
 
 meleeAttack
   :: Unit -- | Damager
   -> Unit -- | Victim
+  -> Coords -- | Coords
   -> JavaRandom AttackResult
-meleeAttack = meleeAttackWithMultiplier 1.0
+meleeAttack = meleeAttackWithMultiplier 1.0 
 
 rangeAttack
-  :: Unit -- | Damager
-  -> Unit -- | Victim
+  :: Unit   -- | Damager
+  -> Unit   -- | Victim
+  -> Coords -- |
   -> JavaRandom AttackResult
-rangeAttack unit1@(Unit _ state1) unit2@(Unit _ state2) = do
+rangeAttack unit1@(Unit _ state1) unit2@(Unit _ state2) coords = do
   let isClose = length (getPath (getCoords state1) (getCoords state2)) - 1 <= 1
   if isClose || getCurrentAmmo state2 <= 0
-    then (parryAttackWrapper (meleeAttackWithMultiplier 0.5)) unit1 unit2
+    then (parryAttackWrapper (meleeAttackWithMultiplier 0.5)) unit1 unit2 coords
     else do
-      attackResult@(AttackResult damager victim) <- meleeAttack unit1 unit2
+      attackResult@(AttackResult damager victim) <- meleeAttack unit1 unit2 (getCoords state1)
 
       case damager of
         Just (Unit damagerType damagerState) -> do
@@ -178,9 +181,9 @@ rangeAttack unit1@(Unit _ state1) unit2@(Unit _ state2) = do
           return (AttackResult (Just (Unit damagerType newDamageState)) victim)
         Nothing -> return attackResult
 
-parryAttackWrapper :: (Unit -> Unit -> JavaRandom AttackResult) -> Unit -> Unit -> JavaRandom AttackResult
-parryAttackWrapper func unit1 unit2 = do
-    firstAttack <- func unit1 unit2
+parryAttackWrapper :: (Unit -> Unit -> Coords -> JavaRandom AttackResult) -> Unit -> Unit -> Coords -> JavaRandom AttackResult
+parryAttackWrapper func unit1 unit2 attackCoords = do
+    firstAttack <- func unit1 unit2 attackCoords
     parryIfPossibleFunc firstAttack
   where
     parryIfPossibleFunc :: AttackResult -> JavaRandom AttackResult
@@ -188,12 +191,12 @@ parryAttackWrapper func unit1 unit2 = do
       where
         defaultValue = return attackResult
         maybeValue = do
-          victimValue <- victim
+          victimValue@(Unit _ victimState) <- victim
           damagerValue <- damager
-          return (attack victimValue damagerValue)
+          return (attack victimValue damagerValue (getCoords victimState))
 
 
-getAttackFunc :: UnitType -> (Unit -> Unit -> JavaRandom AttackResult)
+getAttackFunc :: UnitType -> (Unit -> Unit -> Coords -> JavaRandom AttackResult)
 -- ||| Castle fraction
 getAttackFunc Pikeman      = parryAttackWrapper meleeAttack
 getAttackFunc Swordsman    = parryAttackWrapper meleeAttack
@@ -210,11 +213,12 @@ getAttackFunc Beholder     = rangeAttack
 getAttackFunc Minotaur     = parryAttackWrapper meleeAttack
 
 attack
-  :: Unit -- | Damager
-  -> Unit -- | Victim
+  :: Unit   -- | Damager
+  -> Unit   -- | Victim
+  -> Coords -- |
   -> JavaRandom AttackResult
-attack unit1@(Unit unitType _) unit2 = do
-  (AttackResult damager victim) <- (getAttackFunc unitType) unit1 unit2
+attack unit1@(Unit unitType _) unit2 coords = do
+  (AttackResult damager victim) <- (getAttackFunc unitType) unit1 unit2 coords
   return (AttackResult (postAttack unit1 damager) (postDefense unit2 victim))
 
 postAttack

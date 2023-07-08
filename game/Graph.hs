@@ -122,7 +122,7 @@ genVertex width height coords =
 
 -- Method to generate field with given X and Y sizes (w/o obstacles)
 generateGraph :: Int -> Int -> Graph
-generateGraph width height = Graph vertices
+generateGraph width height = Graph graphVertices
   where
     points = concatMap (\ x -> zip (repeat x) (take height [0 .. ])) (take width [0 .. ])
-    vertices = map (genVertex width height) points
+    graphVertices = map (genVertex width height) points
