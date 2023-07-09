@@ -2,7 +2,7 @@
 module Graphics where
 import Graphics.Gloss
 import GameHandler
-import GameInternal
+import Game
 import Utils
 --offset :: Offset
 --offset = (1.6, 2.5)

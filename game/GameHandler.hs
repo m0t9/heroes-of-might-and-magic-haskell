@@ -1,5 +1,5 @@
 module GameHandler where
-import GameInternal
+import Game
 
 import Graphics.Gloss.Interface.IO.Game
 -- import Data.Ord (Down)

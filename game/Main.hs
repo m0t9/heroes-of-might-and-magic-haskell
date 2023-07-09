@@ -1,7 +1,7 @@
 module Main where
 import Graphics
 import Graphics.Gloss
-import GameInternal
+import Game
 import GameHandler
 
 window :: Display
