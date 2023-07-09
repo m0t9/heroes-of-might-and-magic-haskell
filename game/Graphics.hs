@@ -29,10 +29,6 @@ type Offset = (Double, Double)
 type Field = Picture
 data CellPart = UR | UL | L | DL | DR | R 
 
-
--- Constants
-sizeOfField = (15, 11)
-
 -- RENDERERS
 -- We are rendering the whole situation right here.
 renderState :: State -> Picture
@@ -49,11 +45,11 @@ renderField units = drawUnits units <> drawField (0, 0)
 
 drawField :: CellCoords -> Picture
 drawField (x, y)
-  | (x == xF && y == yF) = drawCell (x, y) lineLoop
-  | (x == xF) = drawField (0, y+1) <> drawCell (x, y) lineLoop
+  | (x == xF - 1 && y == yF - 1) = drawCell (x, y) lineLoop
+  | (x == xF - 1) = drawField (0, y+1) <> drawCell (x, y) lineLoop
   | otherwise = drawField (x+1, y) <> drawCell (x, y) lineLoop
   where
-    (xF, yF) = sizeOfField
+    (xF, yF) = fieldSize
 
 drawCell :: CellCoords -> (Path -> Picture) -> Field
 drawCell cellCoords drawFunc = drawFunc (makeHexagonDotSet cellCoords hexSide)
