@@ -1,7 +1,7 @@
 module Graph where
-
+import Utils
 -- Label for vertex (coordinates of cell)
-type Coords = (Int, Int)
+
 
 -- Constant definition for non-existing predecessor in BFS
 noPredecessor :: Coords
