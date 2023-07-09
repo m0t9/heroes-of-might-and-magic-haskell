@@ -22,11 +22,16 @@ data UnitType =
   Pikeman | Archer | Swordsman | Monk        -- | Castle fraction
   | Dwarf | WoodElf | DenroidGuard           -- | Rampart fraction
   | Troglodyte | Harpy | Beholder | Minotaur -- | Dungeon fraction
-data UnitProps = UnitProps {getAttackPoints :: Int, getDefensePoints :: Int, getDamage :: [Int], getHealth :: Int, getSpeed :: Int, getAmmo :: Int, isFlying :: Bool}
+  deriving (Eq)
+data UnitProps = UnitProps {getAttackPoints :: Int, getDefensePoints :: Int, getDamage :: [Int], getHealth :: Int, getSpeed :: Int, getAmmo :: Int, isFlying :: Bool} deriving (Eq)
 
-data UnitState = UnitState {getProps :: UnitProps, getPlayer :: Player, getCoords :: CellCoords, getHealthOfLast :: Int, getCurrentAmmo :: Int, getStackSize :: Int}
+data UnitState = UnitState {getProps :: UnitProps, getPlayer :: Player, getCoords :: CellCoords, getHealthOfLast :: Int, getCurrentAmmo :: Int, getStackSize :: Int} deriving (Eq)
 
 data Unit = Unit UnitType UnitState
+
+instance (Eq Unit) where
+  (Unit a b) == (Unit c d) = (a == c) && b == d
+  
 
 createUnit :: UnitType -> Player -> CellCoords -> Int -> Unit
 createUnit unitType player coords stackSize = Unit unitType (UnitState props player coords (getHealth props) (getAmmo props) stackSize)

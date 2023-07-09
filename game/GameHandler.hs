@@ -154,13 +154,38 @@ noSelectedStateHandler :: Event -> State -> State
 noSelectedStateHandler (EventKey (MouseButton LeftButton) Down _ (x, y)) state = selectUnit state (float2Double x, float2Double y)
 noSelectedStateHandler _e _st = _st
 
+doesExistInList :: CellCoords -> [CellCoords] -> Bool
+doesExistInList _ [] = False
+doesExistInList req (crd:crds)
+  | req == crd = True
+  | otherwise = doesExistInList req crds
+
+isMovable :: State -> CellCoords -> Bool
+isMovable (Selected gameState unit) coords = doesExistInList coords (getCellsToMove unit gameState)
+isMovable _ _ = False
 
 determineAction :: State -> DoubleCoords -> State
 determineAction (Selected gameState unit) coords =
   case (coordsToHexHMM3 coords) of
     Nothing -> NoSelected gameState
-    Just (x, y) -> NoSelected gameState 
+    Just (x, y) -> if isMovable (Selected gameState unit) (x, y)
+      then moveCharacter (Selected gameState unit) (x, y)
+      else Selected gameState unit
 determineAction _state _ = _state  
+
+moveCharacter :: State -> CellCoords -> State
+moveCharacter (Selected (GameState units (Player turn)) unit) crds = NoSelected (GameState updatedUnits (Player (turn))) -- not
+  where
+    (Unit unitType unitProps) = unit
+    newPosition = changeStateCoords unitProps crds
+    updatedUnits = map (changeUnitProps unit newPosition) units
+moveCharacter state _ = state
+
+changeUnitProps :: Unit -> UnitState -> Unit -> Unit
+changeUnitProps (Unit unitType unitState) u1prps uCur
+  | (Unit unitType unitState) == uCur = Unit unitType u1prps
+  | otherwise = uCur
+
 
 selectedStateHandler :: Event -> State -> State
 selectedStateHandler (EventKey (SpecialKey KeyEsc) Down _ _) (Selected gameState _) = NoSelected gameState 
