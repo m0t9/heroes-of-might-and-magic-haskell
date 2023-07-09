@@ -1,11 +1,21 @@
 module GameHandler where
-import Graphics
-import Graphics.Gloss
 import GameInternal
 
 import Graphics.Gloss.Interface.IO.Game
 -- import Data.Ord (Down)
 import GHC.Float (float2Double)
+import Utils
+
+hexToCoords:: Offset -> CellCoords -> Double -> DoubleCoords
+hexToCoords (xOffset, yOffset) (xHex, yHex) side =
+  (xOffset + xShift, yOffset + yShift)
+  where
+    x = fromIntegral xHex
+    y = fromIntegral yHex
+    yShift = side * (1+ 1.5*y)--(1 + (2*y))
+    xShift
+      | even yHex = (sqrt 3) * side * (1 + x) 
+      | otherwise = (sqrt 3) * side * (1/2 + x)
 
 isInHex :: DoubleCoords -> DoubleCoords -> Double -> Bool
 isInHex (x, y) (xHexCenter, yHexCenter) side
