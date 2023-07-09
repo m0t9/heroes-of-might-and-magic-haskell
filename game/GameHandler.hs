@@ -39,8 +39,9 @@ coordsToHexWithDomain offsetSize coords side (xMaxHex, yMaxHex)
       Just (x, y) -> result
         where
           result
-            | (x > xMaxHex) || (y > yMaxHex) = Nothing
-            | otherwise                      = Just (x, y)
+            | (x > xMaxHex) || (y > yMaxHex) 
+             || (x < 0) || (y < 0) = Nothing
+            | otherwise            = Just (x, y)
 
 
 coordsToHex
@@ -56,9 +57,9 @@ coordsToHex (xOffset, yOffset) (x, y) side
     xCoord = x-xOffset
     yCoord = y-yOffset
     x1 = floor (xCoord / (sqrtSide*2))
-    x2 = floor ((xCoord+sqrtSide) / (sqrtSide*2))
-    y1 = floor (yCoord / side)
-    y2 = floor ((yCoord + (side / 2)) / side)
+    x2 = floor ((xCoord+(sqrtSide)) / (sqrtSide*2))
+    y1 = (floor (yCoord / (3 * side))) * 2
+    y2 = (floor ((yCoord - (3 * side / 2)) / (3* side))) *2 + 1
     isDotInHexagon :: CellCoords -> Bool
     isDotInHexagon (xHex, yHex) = isInHex (x, y) centerCoords side
       where
