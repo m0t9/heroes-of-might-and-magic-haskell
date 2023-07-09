@@ -11,21 +11,28 @@ background :: Color
 background = white
 
 world :: State
-world = NoSelected (GameState units player)
+world = Selected (GameState units firstPlayer sortedUnits) firstUnit
+  where
+    firstUnit = getFirstUnit sortedUnits
+    firstPlayer = determineTheFirst sortedUnits
+    sortedUnits = sortUnits units
 
 main :: IO ()
 main = play window background 1 world renderState gameHandler timeHandler
 
 units :: [Unit]
 units = [
-    createUnit Harpy player (0, 0) 1,
-    createUnit Archer player (0, 1) 1,
-    createUnit Archer player (1, 0) 1,
-    createUnit Archer player (1, 1) 1
+    createUnit Harpy player1 (0, 0) 1,
+    createUnit Dwarf player1 (0, 1) 1,
+    createUnit Archer player2 (1, 0) 1,
+    createUnit Archer player2 (1, 1) 1
   ]
 
-player :: Player
-player = Player True
+player1 :: Player
+player1 = Player LeftPlayer
+
+player2 :: Player
+player2 = Player RightPlayer
 
 timeHandler :: (Float -> world -> world)
 timeHandler _dt wrld = wrld 
