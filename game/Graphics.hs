@@ -34,6 +34,9 @@ data CellPart = UR | UL | L | DL | DR | R
 renderState :: State -> Picture
 --renderState (NoSelected (GameState units _turn _queue)) = renderField units
 renderState (Selected (GameState units turn _queue) unit) = renderSelection (GameState units turn _queue) unit <> renderField units
+renderState (Moving state _unit _coords _animation) = renderField units
+  where
+    (GameState units _turn _queue) = state 
 
 renderSelection :: GameState -> Unit -> Picture
 renderSelection gameState unit = pictures (map selectedCell (getCellsToMove unit gameState)) <> selectedCell (getUnitCoords unit)
