@@ -144,21 +144,6 @@ selectFriendlyUnit gameState coords = findUnit coords friendlyUnits
   where 
     friendlyUnits = filterFriendly (turn gameState) (getUnits gameState) 
 
-
---selectUnit :: State -> DoubleCoords -> State
---selectUnit (NoSelected gameState) coords
---  = case (coordsToHexHMM3 coords) of
---    Nothing -> NoSelected gameState
---    Just (x, y) -> case selectFriendlyUnit gameState (x, y) of
---      Nothing -> NoSelected gameState
---      Just unit -> Selected gameState unit
---selectUnit _state _ = _state      
-
-
---noSelectedStateHandler :: Event -> State -> State
---noSelectedStateHandler (EventKey (MouseButton LeftButton) Down _ (x, y)) state = selectUnit state (float2Double x, float2Double y)
---noSelectedStateHandler _e _st = _st
-
 doesExistInList :: CellCoords -> [CellCoords] -> Bool
 doesExistInList _ [] = False
 doesExistInList req (crd:crds)
@@ -175,6 +160,7 @@ determineAction (Selected gameState unit) coords =
     Just (x, y) -> if isMovable (Selected gameState unit) (x, y)
       then moveCharacter (Selected gameState unit) (x, y)
       else Selected gameState unit 
+determineAction state _ = state
 
 getFirstUnit :: [Unit] -> Unit
 getFirstUnit (y:ys) = y
@@ -194,38 +180,26 @@ moveCharacter (Selected gameState unit) crds = Moving gameState unit crds newAni
     (GameState units (Player turn) queue) = gameState
     (Unit unitType unitProps) = unit
     newAnimation = findPath graph (getUnitCoords unit) crds (const False) -- Add False check for flying units and REAL check for non-flying units
-    --newPosition = changeStateCoords unitProps crds
-    --updatedUnit = Unit unitType newPosition
-    --newQueue = map (changeUnitProps unit newPosition) queue -- updatePlayer. If queue is empty, then replace player and replace current queue with NEW queue.
-    --updatedQueue = moveUnitToQueueEnd updatedUnit newQueue
-    --updatedPlayer = determineTheFirst updatedQueue
-    --updatedFirstUnit = getFirstUnit updatedQueue
-    --updatedUnits = map (changeUnitProps unit newPosition) units
 moveCharacter (Moving (GameState units (Player turn) queue) unit crdsState animation) crds -- Do not forget to update Queue and Units!
-  | (unitCoords == crds) = Selected (GameState units updatedPlayer updatedQueue) updatedSelected
+  | (unitCoords == crds) = Selected (GameState units updatedPlayer queue) updatedSelected
   | otherwise = Moving (GameState updatedUnits (Player turn) updatedQueue) updatedUnit crds updatedAnimation
   where
     unitCoords = getUnitCoords unit
     updatedUnit = Unit unitType newPosition
     updatedPlayer = determineTheFirst updatedQueue
-    updatedQueue = moveUnitToQueueEnd unit queue
+    newQueue = map (changeUnitProps unit newPosition) queue
+    updatedQueue = moveUnitToQueueEnd updatedUnit newQueue
     updatedSelected = getFirstUnit updatedQueue
     (frame, updatedAnimation) = getFrame animation
     (Unit unitType unitProps) = unit
     newPosition = changeStateCoords unitProps frame
     updatedUnits = map (changeUnitProps unit newPosition) units
-  -- otherwise
- -- where
- --   (frame, updatedAnimation) = getFrame animation
- --   (Unit unitType unitProps) = unit
- --   unitCoords = getUnitCoords unit
- --   newPosition = changeStateCoords unitProps frame
-  --  updatedUnits = map (changeUnitProps unit newPosition) units
 
 getFrame :: Animation -> (Coords, Animation)
 getFrame frames = case frames of
   Nothing -> ((0, 0), Nothing)
   Just (fr:frms) -> (fr, Just frms)
+  Just [] -> ((0, 0), Nothing)
 
 --getTest :: [Int] -> (Int, [Int])
 --getTest (x:xs) = (x, xs)

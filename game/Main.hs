@@ -18,7 +18,7 @@ world = Selected (GameState units firstPlayer sortedUnits) firstUnit
     sortedUnits = sortUnits units
 
 main :: IO ()
-main = play window background 1 world renderState gameHandler timeHandler
+main = play window background 2 world renderState gameHandler timeHandler
 
 units :: [Unit]
 units = [
