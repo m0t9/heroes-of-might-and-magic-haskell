@@ -5,6 +5,7 @@ import Graphics.Gloss.Interface.IO.Game
 -- import Data.Ord (Down)
 import GHC.Float (float2Double)
 import Utils
+import Graph
 
 
 hexToCoords:: Offset -> CellCoords -> Double -> DoubleCoords
@@ -92,13 +93,15 @@ determineCellPart (x, y) (xCenter, yCenter)
     where
         isInVerticalPart = isAngleMoreThen30InHex (x, y) (xCenter, yCenter)
 
+type Animation = Maybe [Coords]
 
-data State = Selected GameState Unit
+data State = Selected GameState Unit | Moving GameState Unit Coords Animation
 
 
 gameHandler :: Event -> State -> State 
 --gameHandler _event (NoSelected gameState)    = noSelectedStateHandler _event (NoSelected gameState)
 gameHandler _event (Selected gameState unit) = selectedStateHandler _event (Selected gameState unit)
+gameHandler _event (Moving gameState unit crds animation) = (Moving gameState unit crds animation)
 
 
 getUnitCoords::Unit -> CellCoords
@@ -181,17 +184,50 @@ determineTheFirst (unit:units) = getPlayer
   where
     (Unit _unitType (UnitState _ getPlayer _ _ _ _ )) = unit
 
+graph :: Graph
+graph = generateGraph 15 11
+
 moveCharacter :: State -> CellCoords -> State
-moveCharacter (Selected (GameState units (Player turn) queue) unit) crds = Selected (GameState updatedUnits updatedPlayer updatedQueue) updatedFirstUnit -- not
+moveCharacter (Selected gameState unit) crds = Moving gameState unit crds newAnimation
   where
+    (GameState units (Player turn) queue) = gameState
     (Unit unitType unitProps) = unit
-    newPosition = changeStateCoords unitProps crds
+    newAnimation = findPath graph (getUnitCoords unit) crds (const False) -- Add False check for flying units and REAL check for non-flying units
+    --newPosition = changeStateCoords unitProps crds
+    --updatedUnit = Unit unitType newPosition
+    --newQueue = map (changeUnitProps unit newPosition) queue -- updatePlayer. If queue is empty, then replace player and replace current queue with NEW queue.
+    --updatedQueue = moveUnitToQueueEnd updatedUnit newQueue
+    --updatedPlayer = determineTheFirst updatedQueue
+    --updatedFirstUnit = getFirstUnit updatedQueue
+    --updatedUnits = map (changeUnitProps unit newPosition) units
+moveCharacter (Moving (GameState units (Player turn) queue) unit crdsState animation) crds -- Do not forget to update Queue and Units!
+  | (unitCoords == crds) = Selected (GameState units updatedPlayer updatedQueue) updatedSelected
+  | otherwise = Moving (GameState updatedUnits (Player turn) updatedQueue) updatedUnit crds updatedAnimation
+  where
+    unitCoords = getUnitCoords unit
     updatedUnit = Unit unitType newPosition
-    newQueue = map (changeUnitProps unit newPosition) queue -- updatePlayer. If queue is empty, then replace player and replace current queue with NEW queue.
-    updatedQueue = moveUnitToQueueEnd updatedUnit newQueue
     updatedPlayer = determineTheFirst updatedQueue
-    updatedFirstUnit = getFirstUnit updatedQueue
+    updatedQueue = moveUnitToQueueEnd unit queue
+    updatedSelected = getFirstUnit updatedQueue
+    (frame, updatedAnimation) = getFrame animation
+    (Unit unitType unitProps) = unit
+    newPosition = changeStateCoords unitProps frame
     updatedUnits = map (changeUnitProps unit newPosition) units
+  -- otherwise
+ -- where
+ --   (frame, updatedAnimation) = getFrame animation
+ --   (Unit unitType unitProps) = unit
+ --   unitCoords = getUnitCoords unit
+ --   newPosition = changeStateCoords unitProps frame
+  --  updatedUnits = map (changeUnitProps unit newPosition) units
+
+getFrame :: Animation -> (Coords, Animation)
+getFrame frames = case frames of
+  Nothing -> ((0, 0), Nothing)
+  Just (fr:frms) -> (fr, Just frms)
+
+--getTest :: [Int] -> (Int, [Int])
+--getTest (x:xs) = (x, xs)
 
 invertPlayer :: Player -> Player
 invertPlayer (Player LeftPlayer) = Player RightPlayer
@@ -214,3 +250,7 @@ selectedStateHandler :: Event -> State -> State
 selectedStateHandler (EventKey (SpecialKey KeyEsc) Down _ _) (Selected gameState unit) = Selected gameState unit
 selectedStateHandler (EventKey (MouseButton LeftButton) Down _ (x, y)) state = determineAction state (float2Double x, float2Double y)
 selectedStateHandler _e _st = _st
+
+timeHandler :: Float -> State -> State
+timeHandler _dt (Moving gameState unit coords animation) = moveCharacter (Moving gameState unit coords animation) coords
+timeHandler _dt state = state
