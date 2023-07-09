@@ -25,11 +25,8 @@ makeHexagonDotSet hexCoords side =
       downLeft = (realToFrac (x - sqrtSide), realToFrac(y - halfSide))
       upLeft = (realToFrac(x - sqrtSide), realToFrac(y + halfSide))
 
---type FieldSize = (Int, Int)
 type Offset = (Double, Double)
---type CellCoords = (Int, Int)
 type Field = Picture
---type DoubleCoords = (Double, Double)
 data CellPart = UR | UL | L | DL | DR | R 
 
 
@@ -75,9 +72,13 @@ renderUnit (x, y) unit = translate (realToFrac realX) (realToFrac realY) (getUni
 getUnitPicture :: Unit -> Picture
 getUnitPicture (Unit unitType _unitState) =
   case unitType of 
-  Archer -> color red (circleSolid 10)
-  Pikeman -> color red (rectangleSolid 10 10)
-  Swordsman -> color red (rectangleSolid 10 15)
-  Monk -> color red (circleSolid 15)
-  Dwarf -> color green (rectangleSolid 10 10)
-  _ -> blank
+    -- ||| Castle fraction
+    Archer -> color red (circleSolid 10)
+    Pikeman -> color red (rectangleSolid 10 10)
+    Swordsman -> color red (rectangleSolid 10 15)
+    Monk -> color red (circleSolid 15)
+    -- ||| Rampart fraction
+    Dwarf -> color green (rectangleSolid 10 10)
+    -- ||| Dungeon fraction
+    Harpy -> color blue (circleSolid 10)
+    _ -> blank

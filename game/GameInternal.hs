@@ -5,11 +5,13 @@
 {-# HLINT ignore "Use newtype instead of data" #-}
 {-# HLINT ignore "Use <$>" #-}
 module GameInternal where
-import Utils (getPath, sign, Coords)
+import Utils (getPath, sign, CellCoords, FieldSize)
 import Random (JavaRandom, randomInt)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import Control.Monad (replicateM)
 import GHC.Float (int2Double)
+import Graph (Graph, generateGraph, findDistances)
+import Data.Foldable (find)
 
 -- | Game related data types
 data GameState = GameState {getUnits :: [Unit], turn :: Player}
@@ -22,12 +24,24 @@ data UnitType =
   | Troglodyte | Harpy | Beholder | Minotaur -- | Dungeon fraction
 data UnitProps = UnitProps {getAttackPoints :: Int, getDefensePoints :: Int, getDamage :: [Int], getHealth :: Int, getSpeed :: Int, getAmmo :: Int, isFlying :: Bool}
 
-data UnitState = UnitState {getProps :: UnitProps, getPlayer :: Player, getCoords :: Coords, getHealthOfLast :: Int, getCurrentAmmo :: Int, getStackSize :: Int}
+data UnitState = UnitState {getProps :: UnitProps, getPlayer :: Player, getCoords :: CellCoords, getHealthOfLast :: Int, getCurrentAmmo :: Int, getStackSize :: Int}
 
 data Unit = Unit UnitType UnitState
 
+createUnit :: UnitType -> Player -> CellCoords -> Int -> Unit
+createUnit unitType player coords stackSize = Unit unitType (UnitState props player coords (getHealth props) (getAmmo props) stackSize)
+  where
+    props = getInitialProps unitType
+
+-- | Constants
+fieldSize :: FieldSize
+fieldSize = (15, 11)
+
+fieldGraph :: Graph
+fieldGraph = generateGraph (fst fieldSize) (snd fieldSize)
+
 -- | State mutations
-changeStateCoords :: UnitState -> Coords -> UnitState
+changeStateCoords :: UnitState -> CellCoords -> UnitState
 changeStateCoords state coords = UnitState (getProps state) (getPlayer state) (coords) (getHealthOfLast state) (getCurrentAmmo state) (getStackSize state)
 
 changeStateHealthOfLast :: UnitState -> Int -> UnitState
@@ -117,7 +131,7 @@ meleeAttackWithMultiplier
   :: Double -- | Damager multiplier
   -> Unit   -- | Damager
   -> Unit   -- | Victim
-  -> Coords -- | Coords from which unit will attack
+  -> CellCoords -- | Coords from which unit will attack
   -> JavaRandom AttackResult
 meleeAttackWithMultiplier coefficient (Unit unitType1 state1) (Unit unitType2 state2) attackCoords = do
   let stackSize = getStackSize state1
@@ -156,14 +170,14 @@ meleeAttackWithMultiplier coefficient (Unit unitType1 state1) (Unit unitType2 st
 meleeAttack
   :: Unit   -- | Damager
   -> Unit   -- | Victim
-  -> Coords -- | Coords from which unit will attack
+  -> CellCoords -- | Coords from which unit will attack
   -> JavaRandom AttackResult
 meleeAttack = meleeAttackWithMultiplier 1.0 
 
 rangeAttack
   :: Unit   -- | Damager
   -> Unit   -- | Victim
-  -> Coords -- | Coords from which unit will attack
+  -> CellCoords -- | Coords from which unit will attack
   -> JavaRandom AttackResult
 rangeAttack unit1@(Unit _ state1) unit2@(Unit _ state2) coords = do
   let isClose = length (getPath (getCoords state1) (getCoords state2)) - 1 <= 1
@@ -178,7 +192,7 @@ rangeAttack unit1@(Unit _ state1) unit2@(Unit _ state2) coords = do
           return (AttackResult (Just (Unit damagerType newDamageState)) victim)
         Nothing -> return attackResult
 
-counterAttackAttackWrapper :: (Unit -> Unit -> Coords -> JavaRandom AttackResult) -> Unit -> Unit -> Coords -> JavaRandom AttackResult
+counterAttackAttackWrapper :: (Unit -> Unit -> CellCoords -> JavaRandom AttackResult) -> Unit -> Unit -> CellCoords -> JavaRandom AttackResult
 counterAttackAttackWrapper func unit1 unit2 attackCoords = do
     firstAttack <- func unit1 unit2 attackCoords
     counterAttackIfPossibleFunc firstAttack
@@ -193,7 +207,7 @@ counterAttackAttackWrapper func unit1 unit2 attackCoords = do
           return (attack victimValue damagerValue (getCoords victimState))
 
 
-getAttackFunc :: UnitType -> (Unit -> Unit -> Coords -> JavaRandom AttackResult)
+getAttackFunc :: UnitType -> (Unit -> Unit -> CellCoords -> JavaRandom AttackResult)
 -- ||| Castle fraction
 getAttackFunc Pikeman      = counterAttackAttackWrapper meleeAttack
 getAttackFunc Swordsman    = counterAttackAttackWrapper meleeAttack
@@ -212,7 +226,7 @@ getAttackFunc Minotaur     = counterAttackAttackWrapper meleeAttack
 attack
   :: Unit   -- | Damager
   -> Unit   -- | Victim
-  -> Coords -- | Coords from which unit will attack
+  -> CellCoords -- | Coords from which unit will attack
   -> JavaRandom AttackResult
 attack unit1@(Unit unitType _) unit2 coords = (getAttackFunc unitType) unit1 unit2 coords
 
@@ -238,3 +252,50 @@ postAttackHandler
 postAttackHandler unit1 unit2 attackResult' = do
   (AttackResult damager victim) <- attackResult'
   return (AttackResult (postAttack unit1 damager) (postDefense unit2 victim))
+
+-- | Cells to move
+graphCellsToMove :: (GameState -> CellCoords -> Bool) -> Unit -> GameState -> [CellCoords]
+graphCellsToMove isObstacleFunc (Unit unitType state) gameState = map fst filteredBySpeed
+  where
+    startCoords = (getCoords state)
+    distances = findDistances fieldGraph startCoords (isObstacleFunc gameState)
+    speed = getSpeed (getInitialProps unitType)
+
+    filteredBySpeed = filter (\(coords, distance) -> distance < speed && coords /= startCoords) distances
+
+defaultCellsToMove :: Unit -> GameState -> [CellCoords]
+defaultCellsToMove = graphCellsToMove isUnitObstacle
+
+flyingCellsToMove :: Unit -> GameState -> [CellCoords]
+flyingCellsToMove unit gameState@(GameState units _) = filter (not . unitWithCoordsExists) cells
+  where
+    cells = graphCellsToMove (\_ _ -> False) unit gameState
+
+    unitWithCoordsExists :: CellCoords -> Bool
+    unitWithCoordsExists coords = isJust (find (\(Unit _ state) -> getCoords state == coords) units)
+    
+
+getCellsToMoveFunc :: UnitType -> Unit -> GameState -> [CellCoords]
+-- ||| Castle fraction
+getCellsToMoveFunc Pikeman      = defaultCellsToMove
+getCellsToMoveFunc Swordsman    = defaultCellsToMove
+getCellsToMoveFunc Archer       = defaultCellsToMove
+getCellsToMoveFunc Monk         = defaultCellsToMove
+-- ||| Rampart fraction
+getCellsToMoveFunc Dwarf        = defaultCellsToMove
+getCellsToMoveFunc WoodElf      = defaultCellsToMove
+getCellsToMoveFunc DenroidGuard = defaultCellsToMove
+-- ||| Dungeon fraction
+getCellsToMoveFunc Troglodyte   = defaultCellsToMove
+getCellsToMoveFunc Harpy        = flyingCellsToMove
+getCellsToMoveFunc Beholder     = defaultCellsToMove
+getCellsToMoveFunc Minotaur     = defaultCellsToMove
+
+getCellsToMove :: Unit -> GameState -> [CellCoords]
+getCellsToMove unit@(Unit unitType _) = getCellsToMoveFunc unitType unit
+
+-- | Utilities function
+isUnitObstacle :: GameState -> CellCoords -> Bool
+isUnitObstacle (GameState units _) coords = not (null unitsWithSameCoords)
+  where
+    unitsWithSameCoords = filter (\(Unit _ state) -> (getCoords state == coords)) units 

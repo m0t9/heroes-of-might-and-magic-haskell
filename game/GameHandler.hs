@@ -92,17 +92,6 @@ determineCellPart (x, y) (xCenter, yCenter)
         isInVerticalPart = isAngleMoreThen30InHex (x, y) (xCenter, yCenter)
 
 
-getCellsToMove :: Unit -> GameState -> [CellCoords]
-getCellsToMove _u _gs = getAllCellsHH3
-getAllCellsHH3 :: [CellCoords]
-getAllCellsHH3 = getAllCells (0, 0) (15, 11)    
-getAllCells :: CellCoords -> FieldSize -> [CellCoords]
-getAllCells (x, y) (xF, yF)
-  | (x == xF && y == yF) = [(x, y)]
-  | (x == xF) = (x, y) : (getAllCells (0, y+1) (xF, yF))
-  | otherwise = (x, y) : (getAllCells (x+1, y) (xF, yF)) 
-
-
 data State = NoSelected GameState | Selected GameState Unit
 
 

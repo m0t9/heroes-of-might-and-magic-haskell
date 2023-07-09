@@ -5,8 +5,10 @@ type CellCoords = (Int, Int)
 type Offset = (Double, Double)
 type FieldSize = (Int, Int)
 data CellPart = UR | UL | L | DL | DR | R 
+
 offset :: Offset
 offset = (-20, -20)
+
 hexSide :: Double
 hexSide = 24
 
