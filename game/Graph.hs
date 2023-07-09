@@ -8,7 +8,7 @@ noPredecessor :: Coords
 noPredecessor = (-1, -1)
 
 -- Vertex description
-data Vertex = Vertex {
+data Vertex = Vertex {  
                           vertexLabel :: Coords
                         , vertexNeighbors :: [Coords]
                         , vertexDistance :: Int
@@ -26,13 +26,13 @@ vertexInVertices vertex@(Vertex {vertexLabel = label'}) (x:y) =
   (label' == vertexLabel x) || vertexInVertices vertex y
 
 -- Get list of vertices for given labels
-graphVertices 
+takeVertices 
   :: Graph      -- Given graph
   -> [Coords]   -- Given labels (coordinates)
   -> [Vertex] 
-graphVertices (Graph []) _ = []
-graphVertices (Graph (x:y)) [] = x : y
-graphVertices (Graph (x:y)) keys = filter (\ z -> vertexLabel z `elem` keys) (x:y)
+takeVertices (Graph []) _ = []
+takeVertices (Graph (x:y)) [] = x : y
+takeVertices (Graph (x:y)) keys = filter (\ z -> vertexLabel z `elem` keys) (x:y)
 
 -- BFS
 bfs 
@@ -50,7 +50,7 @@ bfs (Graph (a:b)) (Graph (c:d)) (e:f) (g:h) isObstacle'
     inGraph = Graph (a:b)
     eLabel = vertexLabel e
     eNeighbors = vertexNeighbors e
-    eVertexNeighbors = graphVertices inGraph eNeighbors
+    eVertexNeighbors = takeVertices inGraph eNeighbors
     dist = vertexDistance e + 1
     seen = g : h
     filteredNeighbors = filterVertexNeighbors seen eVertexNeighbors isObstacle'
@@ -111,11 +111,11 @@ findPath
   -> (Coords -> Bool) -- Dynamic check are the coordinates of vertex impassable
   -> Maybe [Coords]
 findPath g f t isObstacle' = 
-  if null (graphVertices tree [t])
+  if null (takeVertices tree [t])
     then Nothing
     else Just (reverse (buildPath t (vertices tree)))
   where
-    queue = graphVertices cleanGraph [f]
+    queue = takeVertices cleanGraph [f]
     outGraph = Graph queue
     cleanGraph = resetGraph g
     tree = bfs cleanGraph outGraph queue queue isObstacle'
@@ -171,4 +171,17 @@ generateGraph width height = Graph gVertices
   where
     points = concatMap (\ x -> zip (repeat x) (take height [0 .. ])) (take width [0 .. ])
     gVertices = map (genVertex width height) points
-    
+
+-- Method to find distances from vertex with given label for reachable ones
+findDistances
+  :: Graph              -- Graph to find distances in it
+  -> Coords             -- Label of vertex to start from
+  -> (Coords -> Bool)   -- Dynamic check are the coordinates of vertex impassable
+  -> [(Coords, Int)] 
+findDistances graph fromCoords isObstacle' = distances
+    where
+      queue = takeVertices cleanGraph [fromCoords]
+      outGraph = Graph queue
+      cleanGraph = resetGraph graph
+      tree = bfs cleanGraph outGraph queue queue isObstacle'
+      distances = map (\v -> (vertexLabel v, vertexDistance v)) (vertices tree)
