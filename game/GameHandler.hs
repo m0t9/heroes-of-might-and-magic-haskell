@@ -57,7 +57,7 @@ coordsToHex (xOffset, yOffset) (x, y) side
     xCoord = x-xOffset
     yCoord = y-yOffset
     x1 = floor (xCoord / (sqrtSide*2))
-    x2 = floor ((xCoord+(sqrtSide)) / (sqrtSide*2))
+    x2 = floor ((xCoord-(sqrtSide)) / (sqrtSide*2))
     y1 = (floor (yCoord / (3 * side))) * 2
     y2 = (floor ((yCoord - (3 * side / 2)) / (3* side))) *2 + 1
     isDotInHexagon :: CellCoords -> Bool
