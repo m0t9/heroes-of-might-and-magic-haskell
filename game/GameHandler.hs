@@ -3,6 +3,8 @@ import Graphics
 import Graphics.Gloss
 import GameInternal
 
+import Graphics.Gloss.Interface.IO.Game
+
 isInHex :: DoubleCoords -> DoubleCoords -> Double -> Bool
 isInHex (x, y) (xHexCenter, yHexCenter) side
   | (((x-xHexCenter)*(x-xHexCenter)) + ((y-yHexCenter) * (y-yHexCenter))) > (side*side) = False
@@ -75,10 +77,57 @@ determineCellPart (x, y) (xCenter, yCenter)
     where
         isInVerticalPart = isAngleMoreThen30InHex (x, y) (xCenter, yCenter)
 
+
 getCellsToMove :: Unit -> GameState -> [CellCoords]
-getCellsToMove ::
-data State = NoSelected GameState | Selected GameState
+getCellsToMove _u _gs = getAllCellsHH3
+getAllCellsHH3 :: [CellCoords]
+getAllCellsHH3 = getAllCells (0, 0) (15, 11)    
+getAllCells :: CellCoords -> FieldSize -> [CellCoords]
+getAllCells (x, y) (xF, yF)
+  | (x == xF && y == yF) = [(x, y)]
+  | (x == xF) = (x, y) : (getAllCells (0, y+1) (xF, yF))
+  | otherwise = (x, y) : (getAllCells (x+1, y) (xF, yF)) 
+
+
+data State = NoSelected GameState | Selected GameState Unit
+
 
 gameHandler :: Event -> State -> State 
-gameHandler _event (NoSelected gameState)    = NoSelectedHandler _event ()
-gameHandler _event (Selected gameState unit) = selectedHandler
+gameHandler _event (NoSelected gameState)    = noSelectedStateHandler _event (NoSelected gameState)
+gameHandler _event (Selected gameState unit) = selectedStateHandler _event (Selected gameState unit)
+
+
+noSelectedStateHandler :: Event -> State -> State
+noSelectedStateHandler _e _st = _st
+
+
+selectedStateHandler :: Event -> State -> State
+selectedStateHandler _e _st = _st
+
+
+getUnitCoords::Unit -> CellCoords
+getUnitCoords (Unit _ (UnitState _ _ coords _ _ _)) = coords 
+
+
+getCoordsOfUnits:: [Unit] -> [CellCoords]
+getCoordsOfUnits = map getUnitCoords 
+
+
+getFriendlyCoords :: Player -> [Unit] -> [CellCoords]
+getFriendlyCoords player units = getCoordsOfUnits (filterFriendly player units)
+
+
+getNeighbourCell :: CellCoords -> CellPart -> CellCoords
+getNeighbourCell (x, y) R = (x+1, y)
+getNeighbourCell (x, y) L = (x-1, y)
+getNeighbourCell (x, y) dir
+  | even y    = case dir of
+    UR -> (x+1, y+1)
+    UL -> (x, y+1)
+    DR -> (x+1, y-1)
+    DL -> (x, y-1)
+  | otherwise = case dir of 
+    UR -> (x, y+1)
+    UL -> (x-1, y+1)
+    DR -> (x, y-1)
+    DL -> (x-1, y-1)
