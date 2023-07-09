@@ -6,6 +6,7 @@ import Graphics.Gloss.Interface.IO.Game
 import GHC.Float (float2Double)
 import Utils
 
+
 hexToCoords:: Offset -> CellCoords -> Double -> DoubleCoords
 hexToCoords (xOffset, yOffset) (xHex, yHex) side =
   (xOffset + xShift, yOffset + yShift)
@@ -92,11 +93,11 @@ determineCellPart (x, y) (xCenter, yCenter)
         isInVerticalPart = isAngleMoreThen30InHex (x, y) (xCenter, yCenter)
 
 
-data State = NoSelected GameState | Selected GameState Unit
+data State = Selected GameState Unit
 
 
 gameHandler :: Event -> State -> State 
-gameHandler _event (NoSelected gameState)    = noSelectedStateHandler _event (NoSelected gameState)
+--gameHandler _event (NoSelected gameState)    = noSelectedStateHandler _event (NoSelected gameState)
 gameHandler _event (Selected gameState unit) = selectedStateHandler _event (Selected gameState unit)
 
 
@@ -140,19 +141,19 @@ selectFriendlyUnit gameState coords = findUnit coords friendlyUnits
     friendlyUnits = filterFriendly (turn gameState) (getUnits gameState) 
 
 
-selectUnit :: State -> DoubleCoords -> State
-selectUnit (NoSelected gameState) coords
-  = case (coordsToHexHMM3 coords) of
-    Nothing -> NoSelected gameState
-    Just (x, y) -> case selectFriendlyUnit gameState (x, y) of
-      Nothing -> NoSelected gameState
-      Just unit -> Selected gameState unit
-selectUnit _state _ = _state      
+--selectUnit :: State -> DoubleCoords -> State
+--selectUnit (NoSelected gameState) coords
+--  = case (coordsToHexHMM3 coords) of
+--    Nothing -> NoSelected gameState
+--    Just (x, y) -> case selectFriendlyUnit gameState (x, y) of
+--      Nothing -> NoSelected gameState
+--      Just unit -> Selected gameState unit
+--selectUnit _state _ = _state      
 
 
-noSelectedStateHandler :: Event -> State -> State
-noSelectedStateHandler (EventKey (MouseButton LeftButton) Down _ (x, y)) state = selectUnit state (float2Double x, float2Double y)
-noSelectedStateHandler _e _st = _st
+--noSelectedStateHandler :: Event -> State -> State
+--noSelectedStateHandler (EventKey (MouseButton LeftButton) Down _ (x, y)) state = selectUnit state (float2Double x, float2Double y)
+--noSelectedStateHandler _e _st = _st
 
 doesExistInList :: CellCoords -> [CellCoords] -> Bool
 doesExistInList _ [] = False
@@ -162,24 +163,46 @@ doesExistInList req (crd:crds)
 
 isMovable :: State -> CellCoords -> Bool
 isMovable (Selected gameState unit) coords = doesExistInList coords (getCellsToMove unit gameState)
-isMovable _ _ = False
 
 determineAction :: State -> DoubleCoords -> State
 determineAction (Selected gameState unit) coords =
   case (coordsToHexHMM3 coords) of
-    Nothing -> NoSelected gameState
+    Nothing -> Selected gameState unit
     Just (x, y) -> if isMovable (Selected gameState unit) (x, y)
       then moveCharacter (Selected gameState unit) (x, y)
-      else Selected gameState unit
-determineAction _state _ = _state  
+      else Selected gameState unit 
+
+getFirstUnit :: [Unit] -> Unit
+getFirstUnit (y:ys) = y
+
+determineTheFirst :: [Unit] -> Player
+determineTheFirst [] = Player RightPlayer
+determineTheFirst (unit:units) = getPlayer
+  where
+    (Unit _unitType (UnitState _ getPlayer _ _ _ _ )) = unit
 
 moveCharacter :: State -> CellCoords -> State
-moveCharacter (Selected (GameState units (Player turn)) unit) crds = NoSelected (GameState updatedUnits (Player (turn))) -- not
+moveCharacter (Selected (GameState units (Player turn) queue) unit) crds = Selected (GameState updatedUnits updatedPlayer updatedQueue) updatedFirstUnit -- not
   where
     (Unit unitType unitProps) = unit
     newPosition = changeStateCoords unitProps crds
+    updatedUnit = Unit unitType newPosition
+    newQueue = map (changeUnitProps unit newPosition) queue -- updatePlayer. If queue is empty, then replace player and replace current queue with NEW queue.
+    updatedQueue = moveUnitToQueueEnd updatedUnit newQueue
+    updatedPlayer = determineTheFirst updatedQueue
+    updatedFirstUnit = getFirstUnit updatedQueue
     updatedUnits = map (changeUnitProps unit newPosition) units
-moveCharacter state _ = state
+
+invertPlayer :: Player -> Player
+invertPlayer (Player LeftPlayer) = Player RightPlayer
+invertPlayer (Player RightPlayer) = Player LeftPlayer
+
+moveUnitToQueueEnd :: Unit -> [Unit] -> [Unit]
+moveUnitToQueueEnd _ [] = []
+moveUnitToQueueEnd unit (ut:[]) = [ut, unit]
+moveUnitToQueueEnd unit (ut:uts)
+  | ut == unit = moveUnitToQueueEnd unit uts
+  | otherwise = ut : moveUnitToQueueEnd unit uts
 
 changeUnitProps :: Unit -> UnitState -> Unit -> Unit
 changeUnitProps (Unit unitType unitState) u1prps uCur
@@ -188,6 +211,6 @@ changeUnitProps (Unit unitType unitState) u1prps uCur
 
 
 selectedStateHandler :: Event -> State -> State
-selectedStateHandler (EventKey (SpecialKey KeyEsc) Down _ _) (Selected gameState _) = NoSelected gameState 
+selectedStateHandler (EventKey (SpecialKey KeyEsc) Down _ _) (Selected gameState unit) = Selected gameState unit
 selectedStateHandler (EventKey (MouseButton LeftButton) Down _ (x, y)) state = determineAction state (float2Double x, float2Double y)
 selectedStateHandler _e _st = _st
