@@ -4,13 +4,17 @@ import Graphics.Gloss
 import GameInternal
 
 import Graphics.Gloss.Interface.IO.Game
+-- import Data.Ord (Down)
+import GHC.Float (float2Double)
 
 isInHex :: DoubleCoords -> DoubleCoords -> Double -> Bool
 isInHex (x, y) (xHexCenter, yHexCenter) side
   | (((x-xHexCenter)*(x-xHexCenter)) + ((y-yHexCenter) * (y-yHexCenter))) > (side*side) = False
   | otherwise                                                                           = True
 
-
+coordsToHexHMM3 :: DoubleCoords -> Maybe CellCoords
+coordsToHexHMM3 coords 
+  = coordsToHexWithDomain offset coords hexSide (15, 11)  
 coordsToHexWithDomain
   :: Offset
   -> DoubleCoords
@@ -97,14 +101,6 @@ gameHandler _event (NoSelected gameState)    = noSelectedStateHandler _event (No
 gameHandler _event (Selected gameState unit) = selectedStateHandler _event (Selected gameState unit)
 
 
-noSelectedStateHandler :: Event -> State -> State
-noSelectedStateHandler _e _st = _st
-
-
-selectedStateHandler :: Event -> State -> State
-selectedStateHandler _e _st = _st
-
-
 getUnitCoords::Unit -> CellCoords
 getUnitCoords (Unit _ (UnitState _ _ coords _ _ _)) = coords 
 
@@ -131,3 +127,35 @@ getNeighbourCell (x, y) dir
     UL -> (x-1, y+1)
     DR -> (x, y-1)
     DL -> (x-1, y-1)
+
+findUnit:: CellCoords -> [Unit] -> Maybe Unit
+findUnit _ [] = Nothing
+findUnit coords (unit:units)
+  | coords == (getUnitCoords unit) = Just unit 
+  | otherwise                      = findUnit coords units
+
+
+selectFriendlyUnit :: GameState -> CellCoords -> Maybe Unit
+selectFriendlyUnit gameState coords = findUnit coords friendlyUnits
+  where 
+    friendlyUnits = filterFriendly (turn gameState) (getUnits gameState) 
+
+
+selectUnit :: State -> DoubleCoords -> State
+selectUnit (NoSelected gameState) coords
+  = case (coordsToHexHMM3 coords) of
+    Nothing -> NoSelected gameState
+    Just (x, y) -> case selectFriendlyUnit gameState (x, y) of
+      Nothing -> NoSelected gameState
+      Just unit -> Selected gameState unit
+selectUnit _state _ = _state      
+
+
+noSelectedStateHandler :: Event -> State -> State
+noSelectedStateHandler (EventKey (MouseButton LeftButton) Down _ (x, y)) state = selectUnit state (float2Double x, float2Double y)
+noSelectedStateHandler _e _st = _st
+
+
+
+selectedStateHandler :: Event -> State -> State
+selectedStateHandler _e _st = _st
