@@ -156,6 +156,14 @@ noSelectedStateHandler (EventKey (MouseButton LeftButton) Down _ (x, y)) state =
 noSelectedStateHandler _e _st = _st
 
 
+determineAction :: State -> DoubleCoords -> State
+determineAction (Selected gameState unit) coords =
+  case (coordsToHexHMM3 coords) of
+    Nothing -> NoSelected gameState
+    Just (x, y) -> NoSelected gameState 
+determineAction _state _ = _state  
 
 selectedStateHandler :: Event -> State -> State
+selectedStateHandler (EventKey (SpecialKey KeyEsc) Down _ _) (Selected gameState _) = NoSelected gameState 
+selectedStateHandler (EventKey (MouseButton LeftButton) Down _ (x, y)) state = determineAction state (float2Double x, float2Double y)
 selectedStateHandler _e _st = _st
