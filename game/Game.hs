@@ -12,10 +12,12 @@ import Control.Monad (replicateM)
 import GHC.Float (int2Double)
 import Graph (Graph, generateGraph, findDistances)
 import Data.Foldable (find)
+import Data.List (sortBy)
 
 -- | Game related data types
 data GameState = GameState {getUnits :: [Unit], turn :: Player}
-data Player = Player Bool deriving (Eq)
+data PlayerType = LeftPlayer | RightPlayer deriving (Eq)
+data Player = Player {getType :: PlayerType } deriving (Eq)
 
 -- | Unit related data types
 data UnitType =
@@ -304,3 +306,25 @@ isUnitObstacle :: GameState -> CellCoords -> Bool
 isUnitObstacle (GameState units _) coords = not (null unitsWithSameCoords)
   where
     unitsWithSameCoords = filter (\(Unit _ state) -> (getCoords state == coords)) units 
+
+-- | Sort given units in order to find player for next turn
+sortUnits 
+  :: [Unit]   -- Units of both players
+  -> [Unit]
+sortUnits units = sortBy cmp units
+  where 
+    cmp (Unit _ s1) (Unit _ s2)
+      | sp1 > sp2 = LT
+      | sp2 > sp1 = GT
+      | y1 < y2 = LT
+      | y2 < y1 = GT
+      | otherwise
+      = case tp1 of
+        LeftPlayer -> LT
+        RightPlayer -> GT
+        where 
+          sp1 = getSpeed $ getProps s1
+          sp2 = getSpeed $ getProps s2
+          y1 = snd (getCoords s1)
+          y2 = snd (getCoords s2)
+          tp1 = getType $ getPlayer s1
