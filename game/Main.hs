@@ -33,6 +33,3 @@ player1 = Player LeftPlayer
 
 player2 :: Player
 player2 = Player RightPlayer
-
-timeHandler :: (Float -> world -> world)
-timeHandler _dt wrld = wrld 
