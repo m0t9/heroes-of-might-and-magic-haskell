@@ -179,8 +179,8 @@ moveCharacter (Selected gameState unit) crds = Moving gameState unit crds newAni
   where
     (GameState units (Player turn) queue) = gameState
     (Unit unitType unitProps) = unit
-    newAnimation = findPath graph (getUnitCoords unit) crds (const False) -- Add False check for flying units and REAL check for non-flying units
-moveCharacter (Moving (GameState units (Player turn) queue) unit crdsState animation) crds -- Do not forget to update Queue and Units!
+    newAnimation = getAnimationPath gameState unit crds
+moveCharacter (Moving (GameState units (Player turn) queue) unit _crdsState animation) crds
   | (unitCoords == crds) = Selected (GameState units updatedPlayer queue) updatedSelected
   | otherwise = Moving (GameState updatedUnits (Player turn) updatedQueue) updatedUnit crds updatedAnimation
   where
@@ -194,6 +194,10 @@ moveCharacter (Moving (GameState units (Player turn) queue) unit crdsState anima
     (Unit unitType unitProps) = unit
     newPosition = changeStateCoords unitProps frame
     updatedUnits = map (changeUnitProps unit newPosition) units
+
+getAnimationPath :: GameState -> Unit -> Coords -> Maybe [Coords]
+getAnimationPath _state (Unit Harpy props) coords = findPath graph (getUnitCoords (Unit Harpy props)) coords (const False)
+getAnimationPath state unit coords = findPath graph (getUnitCoords unit) coords (isUnitObstacle state)
 
 getFrame :: Animation -> (Coords, Animation)
 getFrame frames = case frames of
