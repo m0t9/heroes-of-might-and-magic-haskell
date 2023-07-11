@@ -253,6 +253,7 @@ changeUnitProps (Unit unitType unitState) u1prps uCur
 
 selectedStateHandler :: Event -> State -> State
 selectedStateHandler (EventKey (SpecialKey KeyEsc) Down _ _) (Selected gameState unit) = Selected gameState unit
+selectedStateHandler (EventKey (SpecialKey KeySpace) Down _ _) (Selected gameState unit) = skipTurn (Selected gameState unit)
 selectedStateHandler (EventKey (MouseButton LeftButton) Down _ (x, y)) state = determineAction state (float2Double x, float2Double y)
 selectedStateHandler _e _st = _st
 
