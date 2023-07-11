@@ -165,6 +165,15 @@ determineAction state _ = state
 getFirstUnit :: [Unit] -> Unit
 getFirstUnit (y:ys) = y
 
+updateFirstUnit :: [Unit] -> (UnitState -> field -> UnitState) -> field -> [Unit]
+updateFirstUnit (unit:units) changeFunction field = (changeUnitState unit changeFunction field) : units
+updateFirstUnit [] _ _ = []
+
+updateLastUnit :: [Unit] -> (UnitState -> field -> UnitState) -> field -> [Unit]
+updateLastUnit [] _ _ = []
+updateLastUnit [unit] changeFunction field = [changeUnitState unit changeFunction field]
+updateLastUnit (unit:units) changeFunction field = unit : updateLastUnit units changeFunction field
+
 determineTheFirst :: [Unit] -> Player
 determineTheFirst [] = Player RightPlayer
 determineTheFirst (unit:units) = getPlayer
