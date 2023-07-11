@@ -212,6 +212,10 @@ invertPlayer :: Player -> Player
 invertPlayer (Player LeftPlayer) = Player RightPlayer
 invertPlayer (Player RightPlayer) = Player LeftPlayer
 
+moveUnitToQueueStart :: Unit -> [Unit] -> [Unit]
+moveUnitToQueueStart _ [] = []
+moveUnitToQueueStart unit units = unit : delete unit units
+
 moveUnitToQueueEnd :: Unit -> [Unit] -> [Unit]
 moveUnitToQueueEnd unit [] = [unit]
 moveUnitToQueueEnd unit (ut:uts)
