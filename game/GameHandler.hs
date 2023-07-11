@@ -184,25 +184,28 @@ graph :: Graph
 graph = generateGraph 15 11
 
 moveCharacter :: State -> CellCoords -> State
-moveCharacter (Selected gameState unit) crds = Moving gameState unit crds newAnimation
+moveCharacter (Selected gameState unit) crds = Moving newGameState unit crds newAnimation
   where
     (GameState units (Player turn) queue) = gameState
     (Unit unitType unitProps) = unit
     newAnimation = getAnimationPath gameState unit crds
+    updatedUnits = moveUnitToQueueStart unit units
+    newGameState = GameState updatedUnits (Player turn) queue
+   
 moveCharacter (Moving (GameState units (Player turn) queue) unit _crdsState animation) crds
-  | (unitCoords == crds) = Selected (GameState units updatedPlayer queue) updatedSelected
+  | (unitCoords == crds) = Selected (GameState units finalPlayer finalQueue) finalUnit
   | otherwise = Moving (GameState updatedUnits (Player turn) updatedQueue) updatedUnit crds updatedAnimation
   where
-    unitCoords = getUnitCoords unit
-    updatedUnit = Unit unitType newPosition
-    updatedPlayer = determineTheFirst updatedQueue
-    newQueue = map (changeUnitProps unit newPosition) queue
-    updatedQueue = moveUnitToQueueEnd updatedUnit newQueue
-    updatedSelected = getFirstUnit updatedQueue
     (frame, updatedAnimation) = getFrame animation
-    (Unit unitType unitProps) = unit
-    newPosition = changeStateCoords unitProps frame
-    updatedUnits = map (changeUnitProps unit newPosition) units
+
+    finalQueue = moveUnitToQueueEnd unit queue
+    finalUnit = getFirstUnit finalQueue
+    finalPlayer = determineTheFirst finalQueue
+
+    unitCoords = getUnitCoords unit
+    updatedUnit = changeUnitState unit changeStateCoords frame 
+    updatedQueue = updateFirstUnit queue changeStateCoords frame
+    updatedUnits = updateFirstUnit units changeStateCoords frame
 
 getAnimationPath :: GameState -> Unit -> Coords -> Maybe [Coords]
 getAnimationPath _state (Unit Harpy props) coords = findPath graph (getUnitCoords (Unit Harpy props)) coords (const False)
