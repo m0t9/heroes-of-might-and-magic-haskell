@@ -48,6 +48,9 @@ fieldGraph :: Graph
 fieldGraph = generateGraph (fst fieldSize) (snd fieldSize)
 
 -- | State mutations
+changeUnitState :: Unit -> (UnitState -> param -> UnitState) -> param -> Unit
+changeUnitState (Unit unitType unitState) changeFunction stateFields = Unit unitType (changeFunction unitState stateFields)
+
 changeStateCoords :: UnitState -> CellCoords -> UnitState
 changeStateCoords state coords = UnitState (getProps state) (getPlayer state) (coords) (getHealthOfLast state) (getCurrentAmmo state) (getStackSize state)
 
@@ -158,7 +161,7 @@ meleeAttackWithMultiplier coefficient (Unit unitType1 state1) (Unit unitType2 st
 
   let health2 = (getHealth (getProps state2))
   let totalHealth = (getHealthOfLast state2) + (getStackSize state2 - 1) * health2
-  let finalHealth = finalDamage - totalHealth
+  let finalHealth = totalHealth - finalDamage 
 
   let movedUnit1 = Unit unitType1 (changeStateCoords state1 attackCoords)
 
