@@ -22,6 +22,7 @@ main = play window background 3 world renderState gameHandler timeHandler
 
 units :: [Unit]
 units = [
+    createUnit Harpy player1 (2, 2) 1,
     createUnit Harpy player1 (0, 0) 1,
     createUnit Dwarf player1 (0, 1) 1,
     createUnit Archer player2 (1, 0) 1,
