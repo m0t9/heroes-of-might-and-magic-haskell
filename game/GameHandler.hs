@@ -6,6 +6,7 @@ import Graphics.Gloss.Interface.IO.Game
 import GHC.Float (float2Double)
 import Utils
 import Graph
+import Data.List (delete)
 
 
 hexToCoords:: Offset -> CellCoords -> Double -> DoubleCoords
