@@ -245,7 +245,7 @@ moveUnitToQueueEnd unit [] = [unit]
 moveUnitToQueueEnd unit (ut:uts)
   | unit == ut = uts ++ [unit]
   | otherwise = ut : moveUnitToQueueEnd unit uts
-
+   
 changeUnitProps :: Unit -> UnitState -> Unit -> Unit
 changeUnitProps (Unit unitType unitState) u1prps uCur
   | (Unit unitType unitState) == uCur = Unit unitType u1prps
