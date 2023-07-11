@@ -183,6 +183,17 @@ determineTheFirst (unit:units) = getPlayer
 graph :: Graph
 graph = generateGraph 15 11
 
+skipTurn :: State -> State
+skipTurn (Selected gameState unit) = Selected updatedGameState updatedUnit
+  where 
+    (GameState _units _ queue) = gameState
+    updatedQueue = moveUnitToQueueEnd unit queue
+    updatedUnit = getFirstUnit updatedQueue
+    (Unit _ state) = updatedUnit
+    updatedPlayer = getPlayer state
+    updatedGameState = GameState _units updatedPlayer updatedQueue
+skipTurn _s = _s
+
 moveCharacter :: State -> CellCoords -> State
 moveCharacter (Selected gameState unit) crds = Moving newGameState unit crds newAnimation
   where
