@@ -7,6 +7,7 @@ import GHC.Float (float2Double)
 import Utils
 import Graph
 import Data.List (delete)
+import Data.Maybe (isNothing, isJust)
 
 
 hexToCoords:: Offset -> CellCoords -> Double -> DoubleCoords
@@ -85,7 +86,8 @@ isAngleMoreThen30InHex (xCenter, yCenter) (x, y)
     leg1 = abs (x - xCenter)
     leg2 = abs (y - yCenter)
 
-
+determineCellPartHex :: DoubleCoords -> CellCoords -> CellPart
+determineCellPartHex coords hexCoords = determineCellPart coords (hexToCoordsHMM3 hexCoords) 
 determineCellPart :: DoubleCoords -> DoubleCoords -> CellPart
 determineCellPart (x, y) (xCenter, yCenter)
   | (x > xCenter) && (y > yCenter) && isInVerticalPart            = UR
@@ -157,7 +159,57 @@ doesExistInList req (crd:crds)
 isMovable :: State -> CellCoords -> Bool
 isMovable (Selected gameState unit) coords = doesExistInList coords (getCellsToMove unit gameState)
 isMovable _s _c = False
-data Action = Attack | Move | Skip | NoAction
+data Action = Attack AttackType | Move CellCoords | Skip | NoAction
+data HexClick = Hex CellCoords CellPart
+data AttackType = RangeAttack Unit CellCoords | MeleeAttack Unit CellCoords CellPart
+
+clickToAction :: State -> DoubleCoords -> Action
+clickToAction state@(Selected gameState unit) coords = case coordsToHexHMM3 coords of
+  Nothing -> NoAction
+  Just hexCoords -> hexToAction state (Hex hexCoords (determineCellPartHex coords hexCoords))
+
+clickToAction _s _ = NoAction 
+
+hexToAction :: State -> HexClick -> Action
+hexToAction state@(Selected gameState unit) (Hex coords part)
+  | isMovable state coords = Move coords
+  | isJust victim = isAttackable state justVictim part
+  | otherwise = NoAction 
+  where 
+    victim = isInteractable gameState unit coords
+    Just justVictim = victim
+hexToAction _ _ = NoAction  
+
+isAttackable :: State -> Unit -> CellPart -> Action
+isAttackable state@(Selected gameState damager) victim part
+  | getCurrentAmmo (getUnitState damager) > 0 = Attack (RangeAttack victim damagerCell)
+  | isMovable state attackCell || isDamager = Attack (MeleeAttack victim attackCell attackDirection)
+  | otherwise = NoAction
+  where
+    attackCell = getNeighbourCell victimCell part
+    victimCell = getUnitCoords victim
+    damagerCell = getUnitCoords damager
+    isDamager = attackCell == damagerCell
+    attackDirection = invertDirection part
+isAttackable _ _ _ = NoAction  
+
+invertDirection :: CellPart -> CellPart 
+invertDirection UR =  DL
+invertDirection UL =  DR
+invertDirection DR =  UL
+invertDirection DL =  UR
+invertDirection R =  L
+invertDirection L =  R   
+
+determineAction' :: State -> DoubleCoords -> State 
+determineAction' state@(Selected gameState unit) coords = case clickToAction state coords of
+  NoAction -> state
+  Skip -> skipTurn state
+  Move moveCoords -> moveCharacter state moveCoords
+  Attack (RangeAttack victim attackCell) -> performAttack state unit victim attackCell
+  Attack (MeleeAttack victim attackCell attackDirection) -> performAttack state unit victim attackCell
+determineAction' _s _ = _s  
+
 determineAction :: State -> DoubleCoords -> State
 determineAction (Selected gameState unit) coords =
   case (coordsToHexHMM3 coords) of
