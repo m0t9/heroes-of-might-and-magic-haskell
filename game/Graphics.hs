@@ -33,16 +33,22 @@ data CellPart = UR | UL | L | DL | DR | R
 -- We are rendering the whole situation right here.
 renderState :: State -> Picture
 --renderState (NoSelected (GameState units _turn _queue)) = renderField units
-renderState (Selected (GameState units turn _queue) unit) = renderSelection (GameState units turn _queue) unit <> renderField units
+renderState (Selected (GameState units turn _queue) unit) = renderSelection (GameState units turn _queue) unit <> renderField units <> selectedCellUnit unit
 renderState (Moving state _unit _coords _animation) = renderField units
   where
-    (GameState units _turn _queue) = state 
+    (GameState units _turn _queue) = state
 
 renderSelection :: GameState -> Unit -> Picture
-renderSelection gameState unit = pictures (map selectedCell (getCellsToMove unit gameState)) <> selectedCell (getUnitCoords unit)
+renderSelection gameState unit = pictures (map selectedCell (getCellsToMove unit gameState))
 
 selectedCell :: CellCoords -> Picture
 selectedCell coords = color (greyN 0.5) (drawCell coords polygon)
+
+selectedCellUnit :: Unit -> Picture
+selectedCellUnit unit = color (greyN 0.3) (drawCell coords polygon) <> renderUnit coords unit getSelectedUnitPicture <> renderUnit coords unit getUnitPicture
+  where
+    coords = getUnitCoords unit
+
 renderField :: [Unit] -> Picture
 renderField units = drawUnits units <> drawField (0, 0)
 
@@ -61,10 +67,10 @@ drawUnits :: [Unit] -> Picture
 drawUnits units = pictures (map drawUnit units)
 
 drawUnit :: Unit -> Picture
-drawUnit unit = renderUnit (getUnitCoords unit) unit
+drawUnit unit = renderUnit (getUnitCoords unit) unit getUnitPicture
 
-renderUnit :: CellCoords -> Unit -> Picture
-renderUnit (x, y) unit = translate (realToFrac realX) (realToFrac realY) (getUnitPicture unit)
+renderUnit :: CellCoords -> Unit -> (Unit -> Picture) -> Picture
+renderUnit (x, y) unit renderer = translate (realToFrac realX) (realToFrac realY) (renderer unit)
   where
     (realX, realY) = currentConversion (x, y)
 
@@ -80,4 +86,15 @@ getUnitPicture (Unit unitType _unitState) =
     Dwarf -> color green (rectangleSolid 10 10)
     -- ||| Dungeon fraction
     Harpy -> color blue (circleSolid 10)
+    _ -> blank
+
+getSelectedUnitPicture :: Unit -> Picture
+getSelectedUnitPicture (Unit unitType _unitState) =
+  case unitType of
+    Archer -> color yellow (circleSolid 12)
+    Pikeman -> color yellow (rectangleSolid 12 12)
+    Swordsman -> color yellow (rectangleSolid 12 17)
+    Monk -> color yellow (circleSolid 17)
+    Dwarf -> color yellow (rectangleSolid 12 12)
+    Harpy -> color yellow (circleSolid 12)
     _ -> blank
