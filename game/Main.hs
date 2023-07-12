@@ -22,11 +22,12 @@ main = do
 
 units :: [Unit]
 units = [
-    createUnit Harpy player1 (2, 2) 1,
-    createUnit Harpy player1 (0, 0) 1,
-    createUnit Dwarf player1 (0, 1) 1,
-    createUnit Archer player2 (1, 0) 1,
-    createUnit Archer player2 (1, 1) 1
+    createUnit Harpy player1 (4, 4) 10,
+    createUnit Harpy player2 (0, 0) 10,
+    createUnit Dwarf player1 (4, 5) 10,
+    createUnit Dwarf player2 (1, 0) 10,
+    createUnit Archer player1 (5, 4) 10,
+    createUnit Archer player2 (0, 1) 10
   ]
 
 player1 :: Player
