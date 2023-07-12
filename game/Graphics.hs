@@ -7,6 +7,14 @@ import Utils
 import Codec.Picture ( convertRGBA8, readImage, DynamicImage )
 import Graphics.Gloss.Juicy
 
+-- | Colors
+leftPlayerFieldColor :: Color
+leftPlayerFieldColor = makeColor 0.529 1 0.616 0.6
+rightPlayerFieldColor :: Color
+rightPlayerFieldColor = makeColor 1 0.529 0.616 0.6
+selectedCellColor :: Color
+selectedCellColor = makeColor 0 0 0 0.2
+
 --offset :: Offset
 --offset = (1.6, 2.5)
 --hexSide :: Double
@@ -45,7 +53,7 @@ renderSelection :: GameState -> Unit -> Picture
 renderSelection gameState unit = pictures (map selectedCell (getCellsToMove unit gameState))
 
 selectedCell :: CellCoords -> Picture
-selectedCell coords = color (greyN 0.5) (drawCell coords polygon)
+selectedCell coords = color (selectedCellColor) (drawCell coords polygon)
 
 selectedCellUnit :: Unit -> Picture
 selectedCellUnit unit = color (greyN 0.3) (drawCell coords polygon) <> renderUnit coords unit getSelectedUnitPicture <> renderUnit coords unit getUnitPicture
@@ -73,9 +81,14 @@ drawUnit :: Unit -> Picture
 drawUnit unit = renderUnit (getUnitCoords unit) unit getUnitPicture
 
 renderUnit :: CellCoords -> Unit -> (Unit -> Picture) -> Picture
-renderUnit (x, y) unit renderer = translate (realToFrac realX) (realToFrac realY) (renderer unit)
+renderUnit (x, y) unit renderer = cell <> translate (realToFrac realX) (realToFrac realY) (renderer unit)
   where
     (realX, realY) = currentConversion (x, y)
+    cellPlayerColor = case getType (getPlayer (getUnitState unit)) of 
+        LeftPlayer -> leftPlayerFieldColor
+        RightPlayer -> rightPlayerFieldColor
+
+    cell = color cellPlayerColor (drawCell (x, y) polygon)
 
 getUnitPicture :: Unit -> Picture
 getUnitPicture (Unit unitType _unitState) =

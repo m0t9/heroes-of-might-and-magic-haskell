@@ -29,7 +29,7 @@ data UnitProps = UnitProps {getAttackPoints :: Int, getDefensePoints :: Int, get
 
 data UnitState = UnitState {getProps :: UnitProps, getPlayer :: Player, getCoords :: CellCoords, getHealthOfLast :: Int, getCurrentAmmo :: Int, getStackSize :: Int} deriving (Eq)
 
-data Unit = Unit UnitType UnitState
+data Unit = Unit {getUnitType :: UnitType, getUnitState :: UnitState}
 
 instance (Eq Unit) where
   (Unit a b) == (Unit c d) = (a == c) && b == d
