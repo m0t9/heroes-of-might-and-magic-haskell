@@ -18,6 +18,8 @@ selectedCellColor :: Color
 selectedCellColor = makeColor 255 255 255 0.15
 selectedCellColorDefault :: Color
 selectedCellColorDefault = makeColor 255 255 255 0.1
+chosenUnitCellColor :: Color
+chosenUnitCellColor = makeColor 1 0.5 1 1
 
 currentConversion :: CellCoords -> DoubleCoords
 currentConversion hexCoords = hexToCoords offset hexCoords hexSide
@@ -44,8 +46,11 @@ data CellPart = UR | UL | L | DL | DR | R
 -- We are rendering the whole situation right here.
 renderState :: Picture -> [(UnitType, Picture)] -> State -> Picture
 --renderState (NoSelected (GameState units _turn _queue)) = renderField units
-renderState background assets (Selected (GameState units turn _queue _r) unit) = background <> (renderSelection (GameState units turn _queue _r) unit <> renderField units assets <> selectedCellUnit unit assets)
-renderState background assets (Moving state _unit _coords _animation) = background <> renderField units assets
+renderState background assets (Selected (GameState units turn _queue _r) unit) = 
+  background <> (renderSelection (GameState units turn _queue _r) unit <> 
+  selectedCellUnit unit assets <> renderField units assets)
+renderState background assets (Moving state _unit _coords _animation) = 
+  background <> renderField units assets
   where
     (GameState units _turn _queue _r) = state
 
@@ -56,18 +61,26 @@ selectedCell :: CellCoords -> Picture
 selectedCell coords = color selectedCellColor (drawCell coords polygon)
 
 selectedCellUnit :: Unit -> [(UnitType, Picture)] -> Picture
-selectedCellUnit unit assets = color (greyN 0.3) (drawCell coords polygon) <> renderUnit coords unit getSelectedUnitPicture assets <> renderUnit coords unit getUnitPicture assets
+selectedCellUnit unit assets = color chosenUnitCellColor (drawCell coords polygon) <> 
+  renderUnit coords unit getSelectedUnitPicture assets <> 
+  renderUnit coords unit getUnitPicture assets
   where
     coords = getUnitCoords unit
 
 renderField :: [Unit] -> [(UnitType, Picture)] -> Picture
-renderField units assets = drawField (0, 0) <> drawUnits units assets
+renderField units assets = drawField (0, 0) <> drawUnitCells units <> drawUnits units assets
 
 drawField :: CellCoords -> Picture
 drawField (x, y)
-  | (x == xF - 1 && y == yF - 1) = color selectedCellColorDefault (drawCell (x, y) polygon) <> color black (drawCell (x, y) lineLoop)
-  | (x == xF - 1) = drawField (0, y+1) <> color selectedCellColorDefault (drawCell (x, y) polygon) <> color black (drawCell (x, y) lineLoop)
-  | otherwise = drawField (x+1, y) <> color selectedCellColorDefault (drawCell (x, y) polygon) <> color black (drawCell (x, y) lineLoop)
+  | (x == xF - 1 && y == yF - 1) = 
+      color selectedCellColorDefault (drawCell (x, y) polygon) 
+      <> color black (drawCell (x, y) lineLoop)
+  | (x == xF - 1) = drawField (0, y+1) <> 
+    color selectedCellColorDefault (drawCell (x, y) polygon) <> 
+    color black (drawCell (x, y) lineLoop)
+  | otherwise = drawField (x+1, y) <> 
+    color selectedCellColorDefault (drawCell (x, y) polygon) <>
+      color black (drawCell (x, y) lineLoop)
   where
     (xF, yF) = fieldSize
 
@@ -80,24 +93,32 @@ drawUnits units assets = pictures (map (drawUnit assets) units)
 drawUnit :: [(UnitType, Picture)] -> Unit -> Picture
 drawUnit assets unit = renderUnit (getUnitCoords unit) unit getUnitPicture assets
 
+drawUnitCells :: [Unit] -> Picture
+drawUnitCells units = pictures (map unitCell units)
+  where
+    unitCell unit = color cellPlayerColor (drawCell (x, y) polygon)
+      where
+        cellPlayerColor = case getType (getPlayer (getUnitState unit)) of
+          LeftPlayer -> leftPlayerFieldColor
+          RightPlayer -> rightPlayerFieldColor
+        (x, y) = getCoords $ getUnitState unit
+
 renderUnit :: CellCoords -> Unit -> (Unit -> [(UnitType, Picture)] -> Picture) -> [(UnitType, Picture)] -> Picture
-renderUnit (x, y) unit renderer assets = cell <> translate (realToFrac realX) (realToFrac realY) (scale cellPlayerDirection 1 (renderer unit assets))
+renderUnit (x, y) unit renderer assets = 
+  translate (realToFrac realX) (realToFrac realY) (scale cellPlayerDirection 1 (renderer unit assets))
   where
     (realX, realY) = currentConversion (x, y)
     cellPlayerDirection = case getType (getPlayer (getUnitState unit)) of
         LeftPlayer -> 1
         RightPlayer -> -1
-    cellPlayerColor = case getType (getPlayer (getUnitState unit)) of
-        LeftPlayer -> leftPlayerFieldColor
-        RightPlayer -> rightPlayerFieldColor
-
-    cell = color cellPlayerColor (drawCell (x, y) polygon)
 
 getUnitPicture :: Unit -> [(UnitType, Picture)] -> Picture
-getUnitPicture (Unit unitType _unitState) assets = translate (0) (double2Float hexSide/2) (fromMaybe blank (lookup unitType assets))
+getUnitPicture (Unit unitType _unitState) assets = 
+  translate (0) (double2Float hexSide/2) (fromMaybe blank (lookup unitType assets))
 
 getSelectedUnitPicture :: Unit -> [(UnitType, Picture)] -> Picture
-getSelectedUnitPicture (Unit unitType _unitState) assets = translate (0) (double2Float hexSide/2) (fromMaybe blank (lookup unitType assets))
+getSelectedUnitPicture (Unit unitType _unitState) assets = 
+  translate (0) (double2Float hexSide/2) (fromMaybe blank (lookup unitType assets))
 
 getImagePath :: String -> IO [Char]
 getImagePath str = do
