@@ -25,7 +25,7 @@ main = do
   --
   getDwarf <- getImage "dwarf"
   getWoodelf <- getImage "woodelf"
-  getDenroidGuard <- getImage "denroidguard"
+  getDenroidGuard <- getImage "dendroidguard"
   --
   getTroglodyte <- getImage "troglodyte"
   getHarpy <- getImage "harpy"
@@ -48,12 +48,29 @@ main = do
 
 units :: [Unit]
 units = [
-    createUnit Harpy player1 (4, 4) 10,
-    createUnit Harpy player2 (0, 0) 10,
-    createUnit Dwarf player1 (4, 5) 10,
-    createUnit Dwarf player2 (1, 0) 10,
-    createUnit Archer player1 (5, 4) 10,
-    createUnit Archer player2 (0, 1) 10
+    createUnit Pikeman player1 (0, 0) 10,
+    createUnit Archer player1 (0, 1) 10,
+    createUnit Swordsman player1 (0, 2) 10,
+    createUnit Monk player1 (0, 3) 10,
+    createUnit Dwarf player1 (0, 4) 10,
+    createUnit WoodElf player1 (0, 5) 10,
+    createUnit DenroidGuard player1 (0, 6) 10,
+    createUnit Troglodyte player1 (0, 7) 10,
+    createUnit Harpy player1 (0, 8) 10,
+    createUnit Beholder player1 (0, 9) 10,
+    createUnit Minotaur player1 (0, 10) 10,
+
+    createUnit Pikeman player2 (14, 0) 10,
+    createUnit Archer player2 (14, 1) 10,
+    createUnit Swordsman player2 (14, 2) 10,
+    createUnit Monk player2 (14, 3) 10,
+    createUnit Dwarf player2 (14, 4) 10,
+    createUnit WoodElf player2 (14, 5) 10,
+    createUnit DenroidGuard player2 (14, 6) 10,
+    createUnit Troglodyte player2 (14, 7) 10,
+    createUnit Harpy player2 (14, 8) 10,
+    createUnit Beholder player2 (14, 9) 10,
+    createUnit Minotaur player2 (14, 10) 10
   ]
 
 player1 :: Player
