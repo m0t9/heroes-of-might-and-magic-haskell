@@ -18,6 +18,34 @@ packages:
       size: 9538
   original:
     hackage: GLUT-2.7.0.16
+- completed:
+    hackage: JuicyPixels-3.3.8@sha256:c50e7a610ec33e04f04256dc62da8ce667b014ede72c8c6730dd5039c681e70d,3895
+    pantry-tree:
+      sha256: acc8a434f4aa1117101e0dc4de66fd4a9f16cb0d483e4798dbadbfe02925cb69
+      size: 2724
+  original:
+    hackage: JuicyPixels-3.3.8
+- completed:
+    hackage: vector-0.13.0.0@sha256:fa5cac81a17a5af388716792e8b99c24b3b66770086756d0d8b23f8272a0244c,9112
+    pantry-tree:
+      sha256: d2461d28022c8c0a91da08b579b1bff478f617102d2f5ef596cc5b28d14b8b6a
+      size: 4092
+  original:
+    hackage: vector-0.13.0.0
+- completed:
+    hackage: bmp-1.2.6.3@sha256:93901b0e0e13bd729207eca5963bbd4eb95ebbcd74f13c5646bb7cd7e91c0c3e,1395
+    pantry-tree:
+      sha256: 6d6663a230b1e498b5030594d1dd0393c9ec78011e755d875c4eb3dce9ac58f6
+      size: 882
+  original:
+    hackage: bmp-1.2.6.3
+- completed:
+    hackage: gloss-juicy-0.2.3@sha256:0c3bca95237cbf91f8b3b1936a0661f1e0457acd80502276d54d6c5210f88b25,1618
+    pantry-tree:
+      sha256: 914c08509bc3da4707d90e542b44833ca1a62abc83c2848f87df3d7a7a1d7e03
+      size: 273
+  original:
+    hackage: gloss-juicy-0.2.3
 snapshots:
 - completed:
     sha256: 4c972e067bae16b95961dbfdd12e07f1ee6c8fffabbfa05c3d65100b03f548b7

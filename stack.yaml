@@ -6,6 +6,10 @@ packages:
 extra-deps:
   - gloss-1.13.2.2
   - GLUT-2.7.0.16
+  - JuicyPixels-3.3.8
+  - vector-0.13.0.0
+  - bmp-1.2.6.3
+  - gloss-juicy-0.2.3
 
 ghc-options:
   "$locals": -Wall -fno-warn-type-defaults
