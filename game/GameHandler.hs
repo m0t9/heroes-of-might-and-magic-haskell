@@ -157,7 +157,7 @@ doesExistInList req (crd:crds)
 isMovable :: State -> CellCoords -> Bool
 isMovable (Selected gameState unit) coords = doesExistInList coords (getCellsToMove unit gameState)
 isMovable _s _c = False
-
+data Action = Attack | Move | Skip | NoAction
 determineAction :: State -> DoubleCoords -> State
 determineAction (Selected gameState unit) coords =
   case (coordsToHexHMM3 coords) of
@@ -208,11 +208,12 @@ isEnemy (Unit _ state1) (Unit _ state2) = getPlayer state1 == getPlayer state2
 isAttackableFrom :: DoubleCoords -> CellCoords -> State -> Maybe (CellCoords, Unit)
 isAttackableFrom coords cellCoords state = case isInteractable gameState damager cellCoords of
   Nothing -> Nothing
-  Just victim -> if isMovable state neighbourCell
+  Just victim -> if isMovable'
     then Just (neighbourCell, victim)
     else Nothing
   where 
     Selected gameState damager = state
+    isMovable' = (isMovable state neighbourCell) || (neighbourCell == (getUnitCoords damager)) 
     neighbourCell = getNeighbourCell cellCoords part
     part = determineCellPart coords hexCenter
     hexCenter = hexToCoordsHMM3 cellCoords
