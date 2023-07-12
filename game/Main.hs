@@ -14,10 +14,37 @@ world = Selected (GameState units firstPlayer sortedUnits 0) firstUnit
     firstPlayer = determineTheFirst sortedUnits
     sortedUnits = sortUnits units
 
+
 main :: IO ()
 main = do
-  background <- getBackground
-  play window white 3 world (renderState background) gameHandler timeHandler
+  background <- getImage "background"
+  getArcher <- getImage "archer"
+  getPikeman <- getImage "pikeman"
+  getSwordsman <- getImage "swordsman"
+  getMonk <- getImage "monk"
+  --
+  getDwarf <- getImage "dwarf"
+  getWoodelf <- getImage "woodelf"
+  getDenroidGuard <- getImage "denroidguard"
+  --
+  getTroglodyte <- getImage "troglodyte"
+  getHarpy <- getImage "harpy"
+  getBeholder <- getImage "beholder"
+  getMinotaur <- getImage "minotaur"
+  let assets = [
+        (Archer, getArcher),
+        (Pikeman, getPikeman),
+        (Swordsman, getSwordsman),
+        (Monk, getMonk),
+        (Dwarf, getDwarf), 
+        (WoodElf, getWoodelf), 
+        (DenroidGuard, getDenroidGuard), 
+        (Troglodyte, getTroglodyte),
+        (Harpy, getHarpy),
+        (Beholder, getBeholder),
+        (Minotaur, getMinotaur)]
+  play window white 3 world (renderState background assets) gameHandler timeHandler
+
 
 units :: [Unit]
 units = [
