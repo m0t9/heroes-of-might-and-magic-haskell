@@ -14,7 +14,6 @@ custom-setup
     , GLUT
     , JuicyPixels
     , base
-    , bmp
     , gloss
     , gloss-juicy
 
@@ -35,7 +34,6 @@ executable game
       GLUT
     , JuicyPixels
     , base >=4.7 && <5
-    , bmp
     , gloss
     , gloss-juicy
   default-language: Haskell2010
