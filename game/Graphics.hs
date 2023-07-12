@@ -13,7 +13,9 @@ leftPlayerFieldColor = makeColor 0.529 1 0.616 0.6
 rightPlayerFieldColor :: Color
 rightPlayerFieldColor = makeColor 1 0.529 0.616 0.6
 selectedCellColor :: Color
-selectedCellColor = makeColor 0 0 0 0.2
+selectedCellColor = makeColor 255 255 255 0.15
+selectedCellColorDefault :: Color
+selectedCellColorDefault = makeColor 255 255 255 0.1
 
 currentConversion :: CellCoords -> DoubleCoords
 currentConversion hexCoords = hexToCoords offset hexCoords hexSide
@@ -49,7 +51,7 @@ renderSelection :: GameState -> Unit -> Picture
 renderSelection gameState unit = pictures (map selectedCell (getCellsToMove unit gameState))
 
 selectedCell :: CellCoords -> Picture
-selectedCell coords = color (selectedCellColor) (drawCell coords polygon)
+selectedCell coords = color selectedCellColor (drawCell coords polygon)
 
 selectedCellUnit :: Unit -> Picture
 selectedCellUnit unit = color (greyN 0.3) (drawCell coords polygon) <> renderUnit coords unit getSelectedUnitPicture <> renderUnit coords unit getUnitPicture
@@ -61,9 +63,9 @@ renderField units = drawUnits units <> drawField (0, 0)
 
 drawField :: CellCoords -> Picture
 drawField (x, y)
-  | (x == xF - 1 && y == yF - 1) = drawCell (x, y) lineLoop
-  | (x == xF - 1) = drawField (0, y+1) <> drawCell (x, y) lineLoop
-  | otherwise = drawField (x+1, y) <> drawCell (x, y) lineLoop
+  | (x == xF - 1 && y == yF - 1) = color selectedCellColorDefault (drawCell (x, y) polygon) <> color black (drawCell (x, y) lineLoop)
+  | (x == xF - 1) = drawField (0, y+1) <> color selectedCellColorDefault (drawCell (x, y) polygon) <> color black (drawCell (x, y) lineLoop)
+  | otherwise = drawField (x+1, y) <> color selectedCellColorDefault (drawCell (x, y) polygon) <> color black (drawCell (x, y) lineLoop)
   where
     (xF, yF) = fieldSize
 
