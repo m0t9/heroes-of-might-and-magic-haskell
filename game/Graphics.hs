@@ -4,12 +4,15 @@ import Graphics.Gloss
 import GameHandler
 import Game
 import Utils
+import Codec.Picture ( convertRGBA8, readImage, DynamicImage )
+import Graphics.Gloss.Juicy
+
 --offset :: Offset
 --offset = (1.6, 2.5)
 --hexSide :: Double
 --hexSide = 2.4
 currentConversion :: CellCoords -> DoubleCoords
-currentConversion hexCoords = hexToCoords offset hexCoords hexSide  
+currentConversion hexCoords = hexToCoords offset hexCoords hexSide
 
 makeHexagonDotSet :: CellCoords -> Double -> [(Float, Float)]
 makeHexagonDotSet hexCoords side =
@@ -19,22 +22,22 @@ makeHexagonDotSet hexCoords side =
       halfSide = side/2
       sqrtSide = side * (sqrt 3) /2
       up = (realToFrac x, realToFrac (y+side))
-      upRight = (realToFrac (x + sqrtSide), realToFrac(y + halfSide))
-      downRight = (realToFrac (x + sqrtSide), realToFrac(y - halfSide))
-      down = (realToFrac x, realToFrac(y-side))
-      downLeft = (realToFrac (x - sqrtSide), realToFrac(y - halfSide))
-      upLeft = (realToFrac(x - sqrtSide), realToFrac(y + halfSide))
+      upRight = (realToFrac (x + sqrtSide), realToFrac (y + halfSide))
+      downRight = (realToFrac (x + sqrtSide), realToFrac (y - halfSide))
+      down = (realToFrac x, realToFrac (y-side))
+      downLeft = (realToFrac (x - sqrtSide), realToFrac (y - halfSide))
+      upLeft = (realToFrac (x - sqrtSide), realToFrac (y + halfSide))
 
 type Offset = (Double, Double)
 type Field = Picture
-data CellPart = UR | UL | L | DL | DR | R 
+data CellPart = UR | UL | L | DL | DR | R
 
 -- RENDERERS
 -- We are rendering the whole situation right here.
-renderState :: State -> Picture
+renderState :: Picture -> State -> Picture
 --renderState (NoSelected (GameState units _turn _queue)) = renderField units
-renderState (Selected (GameState units turn _queue) unit) = renderSelection (GameState units turn _queue) unit <> renderField units <> selectedCellUnit unit
-renderState (Moving state _unit _coords _animation) = renderField units
+renderState background (Selected (GameState units turn _queue) unit) = background <> renderSelection (GameState units turn _queue) unit <> renderField units <> selectedCellUnit unit
+renderState background (Moving state _unit _coords _animation) = background <> renderField units
   where
     (GameState units _turn _queue) = state
 
@@ -76,7 +79,7 @@ renderUnit (x, y) unit renderer = translate (realToFrac realX) (realToFrac realY
 
 getUnitPicture :: Unit -> Picture
 getUnitPicture (Unit unitType _unitState) =
-  case unitType of 
+  case unitType of
     -- ||| Castle fraction
     Archer -> color red (circleSolid 10)
     Pikeman -> color red (rectangleSolid 10 10)
@@ -98,3 +101,19 @@ getSelectedUnitPicture (Unit unitType _unitState) =
     Dwarf -> color yellow (rectangleSolid 12 12)
     Harpy -> color yellow (circleSolid 12)
     _ -> blank
+
+loadBackground :: IO (Maybe DynamicImage)
+loadBackground = do
+  img <- readImage "sprites/background.png"
+  return $ case img of
+    Left _ -> Nothing
+    Right img -> Just img
+
+convertBackground :: DynamicImage -> Picture
+convertBackground = fromImageRGBA8 . convertRGBA8
+
+getBackground :: IO Picture
+getBackground = do
+    processImage <$> loadBackground
+  where
+    processImage = maybe (color yellow (circleSolid 10)) convertBackground

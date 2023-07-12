@@ -7,9 +7,6 @@ import GameHandler
 window :: Display
 window = InWindow "/DaniilNikulin" (1200, 800) (100, 100)
 
-background :: Color
-background = white
-
 world :: State
 world = Selected (GameState units firstPlayer sortedUnits) firstUnit
   where
@@ -18,7 +15,9 @@ world = Selected (GameState units firstPlayer sortedUnits) firstUnit
     sortedUnits = sortUnits units
 
 main :: IO ()
-main = play window background 3 world renderState gameHandler timeHandler
+main = do
+  background <- getBackground
+  play window white 3 world (renderState background) gameHandler timeHandler
 
 units :: [Unit]
 units = [
