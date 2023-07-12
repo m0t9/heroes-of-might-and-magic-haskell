@@ -15,7 +15,7 @@ import Data.Foldable (find)
 import Data.List (sortBy)
 
 -- | Game related data types
-data GameState = GameState {getUnits :: [Unit], turn :: Player, queue :: [Unit]}
+data GameState = GameState {getUnits :: [Unit], turn :: Player, queue :: [Unit], seed :: Int}
 data PlayerType = LeftPlayer | RightPlayer deriving (Eq)
 data Player = Player {getType :: PlayerType } deriving (Eq)
 
@@ -277,7 +277,7 @@ defaultCellsToMove :: Unit -> GameState -> [CellCoords]
 defaultCellsToMove = graphCellsToMove isUnitObstacle
 
 flyingCellsToMove :: Unit -> GameState -> [CellCoords]
-flyingCellsToMove unit gameState@(GameState units _ _) = filter (not . unitWithCoordsExists) cells
+flyingCellsToMove unit gameState@(GameState units _ _ _) = filter (not . unitWithCoordsExists) cells
   where
     cells = graphCellsToMove (\_ _ -> False) unit gameState
 
@@ -306,7 +306,7 @@ getCellsToMove unit@(Unit unitType _) = getCellsToMoveFunc unitType unit
 
 -- | Utilities function
 isUnitObstacle :: GameState -> CellCoords -> Bool
-isUnitObstacle (GameState units _ _) coords = not (null unitsWithSameCoords)
+isUnitObstacle (GameState units _ _ _) coords = not (null unitsWithSameCoords)
   where
     unitsWithSameCoords = filter (\(Unit _ state) -> (getCoords state == coords)) units 
 

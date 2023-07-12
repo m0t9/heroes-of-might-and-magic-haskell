@@ -3,12 +3,13 @@ import Graphics
 import Graphics.Gloss
 import Game
 import GameHandler
+import Random (JavaRandom(JavaRandom))
 
 window :: Display
 window = InWindow "/DaniilNikulin" (1200, 800) (100, 100)
 
 world :: State
-world = Selected (GameState units firstPlayer sortedUnits) firstUnit
+world = Selected (GameState units firstPlayer sortedUnits 0) firstUnit
   where
     firstUnit = getFirstUnit sortedUnits
     firstPlayer = determineTheFirst sortedUnits

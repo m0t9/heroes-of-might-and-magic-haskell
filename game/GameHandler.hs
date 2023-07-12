@@ -1,6 +1,6 @@
 module GameHandler where
 import Game
-
+import Random
 import Graphics.Gloss.Interface.IO.Game
 -- import Data.Ord (Down)
 import GHC.Float (float2Double)
@@ -19,6 +19,9 @@ hexToCoords (xOffset, yOffset) (xHex, yHex) side =
     xShift
       | even yHex = (sqrt 3) * side * (1 + x) 
       | otherwise = (sqrt 3) * side * (1/2 + x)
+
+hexToCoordsHMM3 :: CellCoords -> DoubleCoords
+hexToCoordsHMM3 coords = hexToCoords offset coords hexSide
 
 isInHex :: DoubleCoords -> DoubleCoords -> Double -> Bool
 isInHex (x, y) (xHexCenter, yHexCenter) side
@@ -153,6 +156,7 @@ doesExistInList req (crd:crds)
 
 isMovable :: State -> CellCoords -> Bool
 isMovable (Selected gameState unit) coords = doesExistInList coords (getCellsToMove unit gameState)
+isMovable _s _c = False
 
 determineAction :: State -> DoubleCoords -> State
 determineAction (Selected gameState unit) coords =
@@ -160,8 +164,58 @@ determineAction (Selected gameState unit) coords =
     Nothing -> Selected gameState unit
     Just (x, y) -> if isMovable (Selected gameState unit) (x, y)
       then moveCharacter (Selected gameState unit) (x, y)
-      else Selected gameState unit 
+      else case isAttackableFrom coords (x, y)  (Selected gameState unit) of
+        Nothing -> Selected gameState unit
+        Just (place, victim) -> performAttack (Selected gameState unit) unit victim place  
 determineAction state _ = state
+
+performAttack 
+  :: State 
+  -> Unit  
+  -> Unit
+  -> CellCoords
+  -> State
+performAttack (Selected gameState unit) damager victim place = newState
+  where 
+    newState = Selected newGameState newUnit
+    result = attack damager victim place
+    (newSeed, (AttackResult postDamager postVictim)) = runJavaRandom result seed
+    GameState units player queue seed = gameState
+    newQueue = replaceAttackUnits (moveUnitToQueueEnd unit queue)
+    newUnits = replaceAttackUnits units
+    replaceAttackUnits unitList = replaceIfAlive (replaceIfAlive unitList (victim, postVictim)) (damager, postDamager)
+    newUnit = getFirstUnit newQueue
+    (Unit unitType unitState) = newUnit
+    newPlayer = getPlayer unitState
+    newGameState = GameState newUnits newPlayer newQueue newSeed
+    
+
+performAttack s_ _ _ _ = s_    
+
+
+replaceIfAlive :: [Unit] -> (Unit, Maybe Unit) -> [Unit]
+replaceIfAlive units (unit, postUnit) = case postUnit of
+  Nothing -> delete unit units
+  Just newUnit -> replace unit newUnit units
+
+isInteractable :: GameState -> Unit -> CellCoords -> Maybe Unit
+isInteractable state unit coords = findUnit coords (getInteractableEntities state unit) 
+
+isEnemy :: Unit -> Unit -> Bool
+isEnemy (Unit _ state1) (Unit _ state2) = getPlayer state1 == getPlayer state2
+
+
+isAttackableFrom :: DoubleCoords -> CellCoords -> State -> Maybe (CellCoords, Unit)
+isAttackableFrom coords cellCoords state = case isInteractable gameState damager cellCoords of
+  Nothing -> Nothing
+  Just victim -> if isMovable state neighbourCell
+    then Just (neighbourCell, victim)
+    else Nothing
+  where 
+    Selected gameState damager = state
+    neighbourCell = getNeighbourCell cellCoords part
+    part = determineCellPart coords hexCenter
+    hexCenter = hexToCoordsHMM3 cellCoords
 
 getFirstUnit :: [Unit] -> Unit
 getFirstUnit (y:ys) = y
@@ -187,26 +241,26 @@ graph = generateGraph 15 11
 skipTurn :: State -> State
 skipTurn (Selected gameState unit) = Selected updatedGameState updatedUnit
   where 
-    (GameState _units _ queue) = gameState
+    (GameState _units _ queue r_) = gameState
     updatedQueue = moveUnitToQueueEnd unit queue
     updatedUnit = getFirstUnit updatedQueue
     (Unit _ state) = updatedUnit
     updatedPlayer = getPlayer state
-    updatedGameState = GameState _units updatedPlayer updatedQueue
+    updatedGameState = GameState _units updatedPlayer updatedQueue r_
 skipTurn _s = _s
 
 moveCharacter :: State -> CellCoords -> State
 moveCharacter (Selected gameState unit) crds = Moving newGameState unit crds newAnimation
   where
-    (GameState units (Player turn) queue) = gameState
+    (GameState units (Player turn) queue r_) = gameState
     (Unit unitType unitProps) = unit
     newAnimation = getAnimationPath gameState unit crds
     updatedUnits = moveUnitToQueueStart unit units
-    newGameState = GameState updatedUnits (Player turn) queue
+    newGameState = GameState updatedUnits (Player turn) queue r_
    
-moveCharacter (Moving (GameState units (Player turn) queue) unit _crdsState animation) crds
-  | (unitCoords == crds) = Selected (GameState units finalPlayer finalQueue) finalUnit
-  | otherwise = Moving (GameState updatedUnits (Player turn) updatedQueue) updatedUnit crds updatedAnimation
+moveCharacter (Moving (GameState units (Player turn) queue r_) unit _crdsState animation) crds
+  | (unitCoords == crds) = Selected (GameState units finalPlayer finalQueue r_) finalUnit
+  | otherwise = Moving (GameState updatedUnits (Player turn) updatedQueue r_) updatedUnit crds updatedAnimation
   where
     (frame, updatedAnimation) = getFrame animation
 
