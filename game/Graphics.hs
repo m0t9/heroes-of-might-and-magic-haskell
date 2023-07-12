@@ -40,8 +40,8 @@ data CellPart = UR | UL | L | DL | DR | R
 -- We are rendering the whole situation right here.
 renderState :: Picture -> State -> Picture
 --renderState (NoSelected (GameState units _turn _queue)) = renderField units
-renderState background (Selected (GameState units turn _queue _r) unit) = background <> renderSelection (GameState units turn _queue _r) unit <> renderField units <> selectedCellUnit unit
-renderState background (Moving state _unit _coords _animation) = background <> renderField units
+renderState background (Selected (GameState units turn _queue _r) unit) = background <> (renderSelection (GameState units turn _queue _r) unit <> renderField units <> selectedCellUnit unit)
+renderState background (Moving state _unit _coords _animation) = background <> (renderField units)
   where
     (GameState units _turn _queue _r) = state
 
