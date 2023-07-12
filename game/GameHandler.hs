@@ -159,6 +159,7 @@ doesExistInList req (crd:crds)
 isMovable :: State -> CellCoords -> Bool
 isMovable (Selected gameState unit) coords = doesExistInList coords (getCellsToMove unit gameState)
 isMovable _s _c = False
+
 data Action = Attack AttackType | Move CellCoords | Skip | NoAction
 data HexClick = Hex CellCoords CellPart
 data AttackType = RangeAttack Unit CellCoords | MeleeAttack Unit CellCoords CellPart
@@ -209,6 +210,8 @@ determineAction' state@(Selected gameState unit) coords = case clickToAction sta
   Attack (RangeAttack victim attackCell) -> performAttack state unit victim attackCell
   Attack (MeleeAttack victim attackCell attackDirection) -> performAttack state unit victim attackCell
 determineAction' _s _ = _s  
+
+
 
 determineAction :: State -> DoubleCoords -> State
 determineAction (Selected gameState unit) coords =
@@ -362,7 +365,7 @@ changeUnitProps (Unit unitType unitState) u1prps uCur
 selectedStateHandler :: Event -> State -> State
 selectedStateHandler (EventKey (SpecialKey KeyEsc) Down _ _) (Selected gameState unit) = Selected gameState unit
 selectedStateHandler (EventKey (SpecialKey KeySpace) Down _ _) (Selected gameState unit) = skipTurn (Selected gameState unit)
-selectedStateHandler (EventKey (MouseButton LeftButton) Down _ (x, y)) state = determineAction state (float2Double x, float2Double y)
+selectedStateHandler (EventKey (MouseButton LeftButton) Down _ (x, y)) state = determineAction' state (float2Double x, float2Double y)
 selectedStateHandler _e _st = _st
 
 timeHandler :: Float -> State -> State
