@@ -7,10 +7,6 @@ import Utils
 import Codec.Picture ( convertRGBA8, readImage, DynamicImage )
 import Graphics.Gloss.Juicy
 
---offset :: Offset
---offset = (1.6, 2.5)
---hexSide :: Double
---hexSide = 2.4
 currentConversion :: CellCoords -> DoubleCoords
 currentConversion hexCoords = hexToCoords offset hexCoords hexSide
 
