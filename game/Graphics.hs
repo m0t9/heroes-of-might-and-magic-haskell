@@ -81,9 +81,12 @@ drawUnit :: [(UnitType, Picture)] -> Unit -> Picture
 drawUnit assets unit = renderUnit (getUnitCoords unit) unit getUnitPicture assets
 
 renderUnit :: CellCoords -> Unit -> (Unit -> [(UnitType, Picture)] -> Picture) -> [(UnitType, Picture)] -> Picture
-renderUnit (x, y) unit renderer assets = cell <> translate (realToFrac realX) (realToFrac realY) (renderer unit assets)
+renderUnit (x, y) unit renderer assets = cell <> translate (realToFrac realX) (realToFrac realY) (scale cellPlayerDirection 1 (renderer unit assets))
   where
     (realX, realY) = currentConversion (x, y)
+    cellPlayerDirection = case getType (getPlayer (getUnitState unit)) of
+        LeftPlayer -> 1
+        RightPlayer -> -1
     cellPlayerColor = case getType (getPlayer (getUnitState unit)) of
         LeftPlayer -> leftPlayerFieldColor
         RightPlayer -> rightPlayerFieldColor
