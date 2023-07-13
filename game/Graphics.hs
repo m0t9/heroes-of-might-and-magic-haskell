@@ -55,10 +55,14 @@ data CellPart = UR | UL | L | DL | DR | R
 
 renderFieldWithState :: [Unit] -> [(UnitType, Picture)] -> [(String, Picture)] -> Unit -> Picture
 renderFieldWithState units assets screenAssets unit = renderField units assets <> 
-  translate (realToFrac (x+20)) (realToFrac (y-25)) (displayStats (fromMaybe blank (lookup "stats" screenAssets)) unit)
+  translate (realToFrac (x+offSetX)) (realToFrac (y-25)) (displayStats (fromMaybe blank (lookup "stats" screenAssets)) unit assets)
   where
     (x, y) = currentConversion (getUnitCoords unit)
 
+    offSetX = case cellPlayerDirection of
+      1 -> 20
+      -1 -> -240
+      _ -> 0
     --(xSt, ySt) = (xConv + xOff, yConv + yOff)
     cellPlayerDirection = case getType (getPlayer (getUnitState unit)) of
       LeftPlayer -> 1
@@ -221,8 +225,9 @@ getImage name = do
 displayStats
   :: Picture    -- Stats backgrou
   -> Unit       -- Unit to draw his stats
+  -> [(UnitType, Picture)]
   -> Picture
-displayStats initBg unit = bg <> stats
+displayStats initBg unit assets = bg <> stats <> renderSprite
   where
     state = getUnitState unit
     props = getProps state
@@ -242,9 +247,11 @@ displayStats initBg unit = bg <> stats
 
     renderListText [] _ = blank
     renderListText (p : ps) ind = 
-      translate 0 ((-13) * fromIntegral ind) (getTextPic p) <>
+      translate 25 ((-13) * fromIntegral ind) (getTextPic p) <>
         renderListText ps (ind + 1)
     
-    bg = translate (60) ((-36)) (color borderColor (rectangleSolid 144.1 107.1) <> (scale 0.4 0.4 initBg))
+    renderSprite = translate 200 (-36) (scale 0.75 0.75 (fromMaybe blank ((lookup (getUnitType unit) assets))))
+    
+    bg = translate (115) ((-36)) (color borderColor (rectangleSolid 232.5 108.1) <> (scale 0.65 0.4 initBg))
     stats = renderListText statsList 0
     
