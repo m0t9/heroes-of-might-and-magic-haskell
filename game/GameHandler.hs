@@ -113,7 +113,7 @@ data State
 
 data PostAttackParameter
   = HarpyReturnPoint Coords
-  | NoParams  
+  | NoParams
 
 
 gameHandler :: Event -> State -> State
@@ -183,7 +183,7 @@ hexToAction _ _ = NoAction
 
 isAttackable :: State -> Unit -> CellPart -> Action
 isAttackable state@(Selected gameState damager) victim part
-  | getCurrentAmmo (getUnitState damager) > 0 = Attack (RangeAttack victim damagerCell)
+  | (getCurrentAmmo (getUnitState damager) > 0) && not (isEnemyNear gameState damager) = Attack (RangeAttack victim damagerCell)
   | isMovable state attackCell || isDamager = Attack (MeleeAttack victim attackCell attackDirection)
   | otherwise = NoAction
   where
@@ -204,15 +204,15 @@ invertDirection L =  R
 
 determineAction' :: State -> DoubleCoords -> State
 determineAction' state@(Selected gameState unit) coords = case clickToAction state coords of
-  NoAction 
+  NoAction
    -> state
-  Skip 
+  Skip
    -> skipTurn state
-  Move moveCoords 
+  Move moveCoords
    -> moveCharacter state moveCoords
-  Attack (RangeAttack victim rangeAttackCell) 
+  Attack (RangeAttack victim rangeAttackCell)
    -> attackPhase (Attacking gameState unit rangeAttackCell victim R param)
-    where 
+    where
       param = determinePostAttackParameter unit
   Attack (MeleeAttack victim meleeAttackCell attackDirection)
    -> moveBeforeAttack (AttackMoving gameState unit meleeAttackCell victim attackDirection animation param)
@@ -223,7 +223,7 @@ determineAction' _s _ = _s
 
 determinePostAttackParameter :: Unit -> PostAttackParameter
 determinePostAttackParameter (Unit Harpy state) = HarpyReturnPoint (getCoords state)
-determinePostAttackParameter _ = NoParams 
+determinePostAttackParameter _ = NoParams
 replaceSeed :: GameState -> Int -> GameState
 replaceSeed (GameState _u _p _q _s) = GameState _u _p _q
 
@@ -346,7 +346,7 @@ moveBeforeAttack :: State -> State
 moveBeforeAttack (AttackMoving gameState unit coords _v _d animation _param)
   | getUnitCoords unit == coords = attackPhase (Attacking gameState unit coords _v _d _param)
   | otherwise                    = AttackMoving newGameState updatedUnit coords _v _d updatedAnimation _param
-    where 
+    where
       (frame, updatedAnimation) = getFrame animation
       GameState units _p queue _r = gameState
       updatedUnit = changeUnitState unit changeStateCoords frame
@@ -361,7 +361,7 @@ attackPhase (Attacking gameState damager coords victim _d param) = case (postVic
  -- Nothing -> PostAttacking newGameState (Just damager) _param
   (Nothing, HarpyReturnPoint returnCoords) -> moveCharacter movingBack returnCoords
   (Nothing, _) -> selected
-  (Just _, _) -> counterAttackPhase (CounterAttacking newGameState damager postDamager _d param) 
+  (Just _, _) -> counterAttackPhase (CounterAttacking newGameState damager postDamager _d param)
   where
     movingBack = Selected newGameState newUnit
     GameState units _p queue seed = gameState
@@ -376,20 +376,20 @@ attackPhase (Attacking gameState damager coords victim _d param) = case (postVic
     selected = Selected selectedGameState selectedUnit
     selectedQueue = replaceIfAlive (moveUnitToQueueEnd damager queue) (victim, postVictim)
     selectedUnit = getFirstUnit selectedQueue
-    selectedPlayer = getPlayer (getUnitState selectedUnit)   
+    selectedPlayer = getPlayer (getUnitState selectedUnit)
     selectedGameState = GameState newUnits selectedPlayer selectedQueue newSeed
 
 attackPhase _s = _s
 
 counterAttackPhase :: State -> State
 -- counterAttackPhase (CounterAttacking gameState damager postDamager _d _param) = postAttackPhase (PostAttacking newGameState postDamager _param)
-counterAttackPhase (CounterAttacking gameState damager postDamager _d param) = case (postDamager, param) of 
+counterAttackPhase (CounterAttacking gameState damager postDamager _d param) = case (postDamager, param) of
   (Nothing, _) -> selected
   -- Just _ -> PostAttacking newGameState postDamager _param
   (Just u, HarpyReturnPoint coords) -> moveCharacter (Selected newGameState u) coords
   (Just _, _) -> selected
   where
-    
+
      GameState units _p queue _s = gameState
      newGameState = GameState newUnits newPlayer newQueue _s
      newUnits = replaceIfAlive units (damager, postDamager)
@@ -399,15 +399,15 @@ counterAttackPhase (CounterAttacking gameState damager postDamager _d param) = c
      selected = Selected selectedGameState selectedUnit
      selectedQueue = replaceIfAlive (moveUnitToQueueEnd damager queue) (damager, postDamager)
      selectedUnit = getFirstUnit selectedQueue
-     selectedPlayer = getPlayer (getUnitState selectedUnit)   
+     selectedPlayer = getPlayer (getUnitState selectedUnit)
      selectedGameState = GameState newUnits selectedPlayer selectedQueue _s
-     
+
 counterAttackPhase _s = _s
 
 postAttackPhase :: State -> State
 postAttackPhase (PostAttacking gameState postUnit param) = case param of
   NoParams -> selected
-    where 
+    where
       (GameState units _p queue _r) = gameState
       newGameState = GameState units newPlayer newQueue _r
       unit = getFirstUnit queue
@@ -416,7 +416,7 @@ postAttackPhase (PostAttacking gameState postUnit param) = case param of
       newPlayer = getPlayer (getUnitState newUnit)
       selected = Selected newGameState newUnit
   HarpyReturnPoint coords -> selected
-    where 
+    where
       (GameState units _p queue _r) = gameState
       newGameState = GameState units newPlayer newQueue _r
       unit = getFirstUnit queue
@@ -428,8 +428,8 @@ postAttackPhase (PostAttacking gameState postUnit param) = case param of
       harpyReturn = case postUnit of
         Just _ -> moveCharacter movingBack coords
         Nothing -> selected
-     
-postAttackPhase _s = _s  
+
+postAttackPhase _s = _s
 
 getAnimationPath :: GameState -> Unit -> Coords -> Maybe [Coords]
 getAnimationPath _state (Unit Harpy props) coords = findPath graph (getUnitCoords (Unit Harpy props)) coords (const False)
@@ -484,7 +484,7 @@ gameOverHandler _event state = state
 
 timeHandler :: Float -> State -> State
 timeHandler _dt (Moving gameState unit coords animation) = moveCharacter (Moving gameState unit coords animation) coords
-timeHandler _dt (AttackMoving _gs _at coords _v _d _an _param) = moveBeforeAttack (AttackMoving _gs _at coords _v _d _an _param) 
+timeHandler _dt (AttackMoving _gs _at coords _v _d _an _param) = moveBeforeAttack (AttackMoving _gs _at coords _v _d _an _param)
 timeHandler _dt state = state
 
 
