@@ -52,31 +52,45 @@ data CellPart = UR | UL | L | DL | DR | R
 
 -- RENDERERS
 -- We are rendering the whole situation right here.
-renderState :: Picture -> [(UnitType, Picture)] -> State -> Picture
+renderState :: Picture -> [(UnitType, Picture)] -> [(String, Picture)] -> State -> Picture
 --renderState (NoSelected (GameState units _turn _queue)) = renderField units
-renderState background assets (Selected (GameState units turn _queue _r) unit) = 
+renderState background assets _gmvr (Selected (GameState units turn _queue _r) unit) = 
   background <> (renderSelection (GameState units turn _queue _r) unit <> 
   selectedCellUnit unit assets <> renderField units assets)
-renderState background assets (Moving state _unit _coords _animation) = 
+renderState background assets _gmvr (Moving state _unit _coords _animation) = 
   background <> renderField units assets
   where
     (GameState units _turn _queue _r) = state
-renderState background assets (AttackMoving state _damager _coords _victim _d _animation _param) = 
+renderState background assets _gmvr (AttackMoving state _damager _coords _victim _d _animation _param) = 
   background <> renderField units assets
   where
     (GameState units _turn _queue _r) = state    
-renderState background assets (Attacking state _damager _coords _victim _d _param) = 
+renderState background assets _gmvr (Attacking state _damager _coords _victim _d _param) = 
   background <> renderField units assets
   where
     (GameState units _turn _queue _r) = state      
-renderState background assets (CounterAttacking state _damager _postDamager _d _param) = 
+renderState background assets _gmvr (CounterAttacking state _damager _postDamager _d _param) = 
   background <> renderField units assets
   where
     (GameState units _turn _queue _r) = state    
-renderState background assets (PostAttacking state _post _param) = 
+renderState background assets _gmvr (PostAttacking state _post _param) = 
   background <> renderField units assets
   where
     (GameState units _turn _queue _r) = state       
+renderState background assets gameOverAssets (GameOver state winner) =
+  background <> renderField units assets <> winnerTable winner gameOverAssets
+  where
+    (GameState units _turn _queue _r) = state
+
+winnerTable :: Player -> [(String, Picture)] -> Picture
+winnerTable player gameOverAssets = translate 0 0 (fromMaybe blank (lookup "gameover" gameOverAssets))
+  <> translate (-50) 25 case player of
+      Player LeftPlayer -> fromMaybe blank (lookup "leftplayer" gameOverAssets)
+      Player RightPlayer -> fromMaybe blank (lookup "rightplayer" gameOverAssets)
+  -- where
+  --   winner = case player of
+  --     Player LeftPlayer -> "LeftPlayer"
+  --     Player RightPlayer -> "RightPlayer"
 
 renderSelection :: GameState -> Unit -> Picture
 renderSelection gameState unit = pictures (map selectedCell (getCellsToMove unit gameState))
