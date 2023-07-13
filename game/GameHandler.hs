@@ -372,7 +372,7 @@ counterAttackPhase (CounterAttacking gameState damager postDamager _d param) = c
      selectedGameState = GameState newUnits selectedPlayer selectedQueue _s
 
 counterAttackPhase _s = _s
-
+{-
 postAttackPhase :: State -> State
 postAttackPhase (PostAttacking gameState postUnit param) = case param of
   NoParams -> selected
@@ -399,7 +399,7 @@ postAttackPhase (PostAttacking gameState postUnit param) = case param of
         Nothing -> selected
 
 postAttackPhase _s = _s
-
+-}
 getAnimationPath :: GameState -> Unit -> Coords -> Maybe [Coords]
 getAnimationPath _state (Unit Harpy props) coords = findPath graph (getUnitCoords (Unit Harpy props)) coords (const False)
 getAnimationPath state unit coords = findPath graph (getUnitCoords unit) coords (isUnitObstacle state)
