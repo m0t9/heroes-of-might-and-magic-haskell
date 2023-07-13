@@ -248,7 +248,7 @@ performAttack
 performAttack (Selected gameState unit) damager victim place = newState
   where
     newState = Selected newGameState newUnit
-    result = attack damager victim place
+    result = attack gameState damager victim place
     (newSeed, AttackResult postDamager postVictim) = runJavaRandom result seed
     GameState units _player queue seed = gameState
     newQueue = replaceAttackUnits (moveUnitToQueueEnd unit queue)
@@ -365,7 +365,7 @@ attackPhase (Attacking gameState damager coords victim _d param) = case (postVic
   where
     movingBack = Selected newGameState newUnit
     GameState units _p queue seed = gameState
-    (newSeed, attackResult) = runJavaRandom (attack damager victim coords) seed
+    (newSeed, attackResult) = runJavaRandom (attack gameState damager victim coords) seed
     newGameState = GameState newUnits newPlayer newQueue newSeed
     postDamager = getDamager attackResult
     postVictim = getVictim attackResult

@@ -50,7 +50,7 @@ main = do
         ("gameover", getGameover),
         ("leftplayer", getLeftPlayer),
         ("rightplayer", getRightPlayer)]
-  play window white 3 world (renderState background assets gameOverScreen) gameHandler timeHandler
+  play window white 10 world (renderState background assets gameOverScreen) gameHandler timeHandler
 
 
 units :: [Unit]
