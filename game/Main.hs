@@ -60,15 +60,15 @@ units = [
     createUnit Beholder player1 (0, 9) 100,
     createUnit Minotaur player1 (0, 10) 100,
 
-    createUnit Pikeman player2 (14, 0) 10,
+    createUnit Pikeman player2 (14, 0) 1,
     createUnit Archer player2 (14, 1) 10,
-    createUnit Swordsman player2 (14, 2) 10,
+    createUnit Swordsman player2 (14, 2) 1,
     createUnit Monk player2 (14, 3) 10,
     createUnit Dwarf player2 (14, 4) 10,
     createUnit WoodElf player2 (14, 5) 10,
     createUnit DenroidGuard player2 (14, 6) 10,
-    createUnit Troglodyte player2 (14, 7) 10,
-    createUnit Harpy player2 (14, 8) 10,
+    createUnit Troglodyte player2 (14, 7) 1,
+    createUnit Harpy player2 (14, 8) 1,
     createUnit Beholder player2 (14, 9) 10,
     createUnit Minotaur player2 (14, 10) 10
   ]

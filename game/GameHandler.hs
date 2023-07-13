@@ -368,11 +368,13 @@ moveBeforeAttack (AttackMoving gameState unit coords _v _d animation _param)
 moveBeforeAttack s_ = s_
 
 attackPhase :: State -> State
-attackPhase (Attacking gameState damager coords victim _d _param) = case postVictim of
+attackPhase (Attacking gameState damager coords victim _d param) = case (postVictim, param) of
  -- Nothing -> PostAttacking newGameState (Just damager) _param
-  Nothing -> selected
-  Just _ -> counterAttackPhase (CounterAttacking newGameState damager postDamager _d _param) 
+  (Nothing, HarpyReturnPoint returnCoords) -> moveCharacter movingBack returnCoords
+  (Nothing, _) -> selected
+  (Just _, _) -> counterAttackPhase (CounterAttacking newGameState damager postDamager _d param) 
   where
+    movingBack = Selected newGameState newUnit
     GameState units _p queue seed = gameState
     (newSeed, attackResult) = runJavaRandom (attack damager victim coords) seed
     newGameState = GameState newUnits newPlayer newQueue newSeed
@@ -392,8 +394,13 @@ attackPhase _s = _s
 
 counterAttackPhase :: State -> State
 -- counterAttackPhase (CounterAttacking gameState damager postDamager _d _param) = postAttackPhase (PostAttacking newGameState postDamager _param)
-counterAttackPhase (CounterAttacking gameState damager postDamager _d _param) = selected
+counterAttackPhase (CounterAttacking gameState damager postDamager _d param) = case (postDamager, param) of 
+  (Nothing, _) -> selected
+  -- Just _ -> PostAttacking newGameState postDamager _param
+  (Just u, HarpyReturnPoint coords) -> moveCharacter (Selected newGameState u) coords
+  (Just _, _) -> selected
   where
+    
      GameState units _p queue _s = gameState
      newGameState = GameState newUnits newPlayer newQueue _s
      newUnits = replaceIfAlive units (damager, postDamager)
