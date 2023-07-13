@@ -162,7 +162,7 @@ drawUnitCells units = pictures (map unitCell units)
 
 renderUnit :: CellCoords -> Unit -> (Unit -> [(UnitType, Picture)] -> Picture) -> [(UnitType, Picture)] -> Picture
 renderUnit (x, y) unit renderer assets = 
-  translate (realToFrac realX) (realToFrac realY) (scale cellPlayerDirection 1 (renderer unit assets)) -- unit itself
+  translate (realToFrac realX) (realToFrac realY + 10) (scale cellPlayerDirection 1 (renderer unit assets)) -- unit itself
     <> translate (realToFrac realXSt) (realToFrac realYSt) (displayStackSize unit)
   where
     (realX, realY) = currentConversion (x, y)
