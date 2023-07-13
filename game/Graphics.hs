@@ -201,3 +201,42 @@ getImage name = do
     processImage <$> loadImage name
   where
     processImage = maybe (color yellow (circleSolid 10)) convertImage
+
+-- Draw unit stats
+displayStats
+  :: Unit       -- Unit to draw his stats
+  -> Picture
+displayStats unit = stats
+  where
+    state = getUnitState unit
+    props = getProps state
+
+    atk = "Attack " ++ show (getAttackPoints props)
+    ammo = "Ammo " ++ show (getCurrentAmmo state)
+    def = "Defense " ++ show (getDefensePoints props)
+    curHp = "Current health " ++ show (getHealthOfLast state)
+    hp = "Health " ++ show (getHealth props)
+    damage = "Damage " ++ show (head (getDamage props)) ++ 
+      "..." ++ show (last (getDamage props))
+    speed = "Speed " ++ show (getSpeed props)
+
+    statsList = [atk, def, ammo, damage, hp, curHp, speed]
+
+    getTextPic txt = color white (scale 0.1 0.1 (text txt))
+
+    renderListText [] _ = blank
+    renderListText (p : ps) ind = 
+      translate 0 ((-11) * fromIntegral ind) (getTextPic p) <>
+        renderListText ps (ind + 1)
+    
+    stats = renderListText statsList 0
+
+
+
+
+
+
+
+    
+
+    
