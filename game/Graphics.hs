@@ -50,13 +50,18 @@ type Offset = (Double, Double)
 type Field = Picture
 data CellPart = UR | UL | L | DL | DR | R
 
+
+renderFieldWithState :: [Unit] -> [(UnitType, Picture)] -> Unit -> Picture
+renderFieldWithState units assets unit = renderField units assets <> displayStats unit
 -- RENDERERS
 -- We are rendering the whole situation right here.
 renderState :: Picture -> [(UnitType, Picture)] -> [(String, Picture)] -> State -> Picture
 --renderState (NoSelected (GameState units _turn _queue)) = renderField units
-renderState background assets _gmvr (Selected (GameState units turn _queue _r) unit) = 
-  background <> (renderSelection (GameState units turn _queue _r) unit <> 
-  selectedCellUnit unit assets <> renderField units assets)
+renderState background assets _gmvr (Selected (GameState units turn _queue _r) unit pkm) = case pkm of
+  Nothing -> background <> (renderSelection (GameState units turn _queue _r) unit <> 
+    selectedCellUnit unit assets <> renderField units assets)
+  Just unitPKM -> background <> (renderSelection (GameState units turn _queue _r) unit <>
+    selectedCellUnit unit assets <> renderFieldWithState units assets unitPKM)
 renderState background assets _gmvr (Moving state _unit _coords _animation) = 
   background <> renderField units assets
   where
