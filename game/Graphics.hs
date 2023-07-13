@@ -237,6 +237,6 @@ displayStats initBg unit = bg <> stats
       translate 0 ((-13) * fromIntegral ind) (getTextPic p) <>
         renderListText ps (ind + 1)
     
-    bg = scale 0.3 0.3 initBg
+    bg = translate (60) ((-36)) (scale 0.4 0.4 initBg) --55
     stats = renderListText statsList 0
     
