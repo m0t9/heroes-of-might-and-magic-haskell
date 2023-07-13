@@ -8,7 +8,7 @@ window :: Display
 window = InWindow "/DaniilNikulin" (1024, 712) (100, 100)
 
 world :: State
-world = Selected (GameState units firstPlayer sortedUnits 0) firstUnit
+world = Selected (GameState units firstPlayer sortedUnits 0) firstUnit Nothing
   where
     firstUnit = getFirstUnit sortedUnits
     firstPlayer = determineTheFirst sortedUnits
