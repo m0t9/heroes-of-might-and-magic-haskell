@@ -6,7 +6,7 @@
 {-# HLINT ignore "Use <$>" #-}
 module Game where
 import Utils (getPath, sign, CellCoords, FieldSize, getNeighbourCells)
-import Random (JavaRandom, randomInt, runJavaRandom)
+import Random (JavaRandom, randomInt)
 import Data.Maybe (fromMaybe, isJust)
 import Control.Monad (replicateM)
 import GHC.Float (int2Double)
@@ -203,7 +203,7 @@ rangeAttack
   -> Unit   -- | Victim
   -> CellCoords -- | Coords from which unit will attack
   -> JavaRandom AttackResult
-rangeAttack gameState unit1@(Unit _ state1) unit2@(Unit _ state2) coords = do
+rangeAttack gameState unit1@(Unit _ state1) unit2@(Unit _ _) coords = do
   if isEnemyNear gameState unit1 || getCurrentAmmo state1 <= 0
     then (counterAttackWrapper (meleeAttackWithMultiplier 0.5)) gameState unit1 unit2 coords
     else do
