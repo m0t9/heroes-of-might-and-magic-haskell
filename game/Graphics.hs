@@ -250,7 +250,7 @@ displayStats initBg unit assets = bg <> stats <> renderSprite
       translate 25 ((-13) * fromIntegral ind) (getTextPic p) <>
         renderListText ps (ind + 1)
     
-    renderSprite = translate 200 (-36) (scale 0.75 0.75 (fromMaybe blank ((lookup (getUnitType unit) assets))))
+    renderSprite = translate 185 (-36) (scale 0.75 0.75 (fromMaybe blank ((lookup (getUnitType unit) assets))))
     
     bg = translate (115) ((-36)) (color borderColor (rectangleSolid 232.5 108.1) <> (scale 0.65 0.4 initBg))
     stats = renderListText statsList 0
