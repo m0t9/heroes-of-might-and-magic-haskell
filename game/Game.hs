@@ -5,8 +5,8 @@
 {-# HLINT ignore "Use newtype instead of data" #-}
 {-# HLINT ignore "Use <$>" #-}
 module Game where
-import Utils (getPath, sign, CellCoords, FieldSize)
-import Random (JavaRandom, randomInt, runJavaRandom)
+import Utils (getPath, sign, CellCoords, FieldSize, getNeighbourCells)
+import Random (JavaRandom, randomInt)
 import Data.Maybe (fromMaybe, isJust)
 import Control.Monad (replicateM)
 import GHC.Float (int2Double)
@@ -77,8 +77,7 @@ getInitialProps WoodElf      = UnitProps 9 5 [3..5] 15 6 24 False    -- Tier 3
 getInitialProps DenroidGuard = UnitProps 9 12 [10..14] 55 3 0 False  -- Tier 5
 -- || Dungeon fraction
 getInitialProps Troglodyte = UnitProps 4 3 [1..3] 5 4 0 False      -- Tier 2
-getInitialProps Harpy      = UnitProps 9 5 [3..5] 15 15 0 True     -- Tier 3
--- getInitialProps Harpy      = UnitProps 9 5 [3..5] 15 6 0 True     -- Tier 3
+getInitialProps Harpy      = UnitProps 9 5 [3..5] 15 6 0 True     -- Tier 3
 getInitialProps Beholder   = UnitProps 9 12 [10..14] 55 3 24 False  -- Tier 5
 getInitialProps Minotaur   = UnitProps 9 12 [10..14] 55 3 0 False  -- Tier 5
 
@@ -97,9 +96,19 @@ getMeleeAttackableEntities gameState (Unit _ state) = filter filterFunc (getUnit
         path = getPath coords (getCoords state')
 
 
+isEnemyNear :: GameState -> Unit -> Bool
+isEnemyNear (GameState units _ _ _) unit = isJust (find filterFunc units)
+  where
+    player = (getPlayer (getUnitState unit))
+    neighbourCells = getNeighbourCells (getCoords (getUnitState unit))
+    
+    filterFunc :: Unit -> Bool
+    filterFunc unit' = player /= getPlayer (getUnitState unit') && isJust (find (\coords -> (getCoords (getUnitState unit')) == coords) neighbourCells)
+
+
 getRangedAttackableEntities :: GameState -> Unit -> [Unit]
 getRangedAttackableEntities gameState unit@(Unit _ state)
-  | getCurrentAmmo state > 0 = getUnits gameState
+  | getCurrentAmmo state > 0 && not (isEnemyNear gameState unit) = getUnits gameState
   | otherwise                = getMeleeAttackableEntities gameState unit
 
 
@@ -140,11 +149,12 @@ data AttackResult = AttackResult {getDamager :: Maybe Unit, getVictim :: Maybe U
 -- | Attack functions
 meleeAttackWithMultiplier
   :: Double -- | Damager multiplier
+  -> GameState
   -> Unit   -- | Damager
   -> Unit   -- | Victim
   -> CellCoords -- | Coords from which unit will attack
   -> JavaRandom AttackResult
-meleeAttackWithMultiplier coefficient (Unit unitType1 state1) (Unit unitType2 state2) attackCoords = do
+meleeAttackWithMultiplier coefficient _ (Unit unitType1 state1) (Unit unitType2 state2) attackCoords = do
   let stackSize = getStackSize state1
   let damage = getDamage (getProps state1)
 
@@ -180,23 +190,24 @@ meleeAttackWithMultiplier coefficient (Unit unitType1 state1) (Unit unitType2 st
       return (AttackResult (Just movedUnit1) (Just (Unit unitType2 newState2)))
 
 meleeAttack
-  :: Unit   -- | Damager
+  :: GameState
+  -> Unit   -- | Damager
   -> Unit   -- | Victim
   -> CellCoords -- | Coords from which unit will attack
   -> JavaRandom AttackResult
 meleeAttack = meleeAttackWithMultiplier 1.0
 
 rangeAttack
-  :: Unit   -- | Damager
+  :: GameState
+  -> Unit   -- | Damager
   -> Unit   -- | Victim
   -> CellCoords -- | Coords from which unit will attack
   -> JavaRandom AttackResult
-rangeAttack unit1@(Unit _ state1) unit2@(Unit _ state2) coords = do
-  let isClose = length (getPath (getCoords state1) (getCoords state2)) - 1 <= 1
-  if isClose || getCurrentAmmo state2 <= 0
-    then (counterAttackWrapper (meleeAttackWithMultiplier 0.5)) unit1 unit2 coords
+rangeAttack gameState unit1@(Unit _ state1) unit2@(Unit _ _) coords = do
+  if isEnemyNear gameState unit1 || getCurrentAmmo state1 <= 0
+    then (counterAttackWrapper (meleeAttackWithMultiplier 0.5)) gameState unit1 unit2 coords
     else do
-      attackResult@(AttackResult damager victim) <- meleeAttack unit1 unit2 (getCoords state1)
+      attackResult@(AttackResult damager victim) <- meleeAttack gameState unit1 unit2 (getCoords state1)
 
       case damager of
         Just (Unit damagerType damagerState) -> do
@@ -204,9 +215,9 @@ rangeAttack unit1@(Unit _ state1) unit2@(Unit _ state2) coords = do
           return (AttackResult (Just (Unit damagerType newDamageState)) victim)
         Nothing -> return attackResult
 
-counterAttackWrapper :: (Unit -> Unit -> CellCoords -> JavaRandom AttackResult) -> Unit -> Unit -> CellCoords -> JavaRandom AttackResult
-counterAttackWrapper func unit1 unit2 attackCoords = do
-    firstAttack <- func unit1 unit2 attackCoords
+counterAttackWrapper :: (GameState -> Unit -> Unit -> CellCoords -> JavaRandom AttackResult) -> GameState -> Unit -> Unit -> CellCoords -> JavaRandom AttackResult
+counterAttackWrapper func gameState unit1 unit2 attackCoords = do
+    firstAttack <- func gameState unit1 unit2 attackCoords
     counterAttackIfPossibleFunc firstAttack
   where
     counterAttackIfPossibleFunc :: AttackResult -> JavaRandom AttackResult
@@ -222,10 +233,10 @@ counterAttackWrapper func unit1 unit2 attackCoords = do
           victimValue@(Unit _ victimState) <- victim
           damagerValue <- damager
           
-          return ((attack victimValue damagerValue (getCoords victimState)) >>= attackResultSwapper)
+          return ((attack gameState victimValue damagerValue (getCoords victimState)) >>= attackResultSwapper)
 
 
-getAttackFunc :: UnitType -> (Unit -> Unit -> CellCoords -> JavaRandom AttackResult)
+getAttackFunc :: UnitType -> (GameState -> Unit -> Unit -> CellCoords -> JavaRandom AttackResult)
 -- ||| Castle fraction
 getAttackFunc Pikeman      = counterAttackWrapper meleeAttack
 getAttackFunc Swordsman    = counterAttackWrapper meleeAttack
@@ -242,11 +253,12 @@ getAttackFunc Beholder     = rangeAttack
 getAttackFunc Minotaur     = counterAttackWrapper meleeAttack
 
 attack
-  :: Unit   -- | Damager
+  :: GameState
+  -> Unit   -- | Damager
   -> Unit   -- | Victim
   -> CellCoords -- | Coords from which unit will attack
   -> JavaRandom AttackResult
-attack unit1@(Unit unitType _) unit2 coords = (getAttackFunc unitType) unit1 unit2 coords
+attack gameState unit1@(Unit unitType _) unit2 coords = (getAttackFunc unitType) gameState unit1 unit2 coords
 
 postAttack
   :: Unit       -- | Unit before attack

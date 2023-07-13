@@ -18,6 +18,7 @@ world = Selected (GameState units firstPlayer sortedUnits 0) firstUnit Nothing
 main :: IO ()
 main = do
   background <- getImage "background"
+  statsBackground <- getImage "stats"
   getArcher <- getImage "archer"
   getPikeman <- getImage "pikeman"
   getSwordsman <- getImage "swordsman"
@@ -50,7 +51,7 @@ main = do
         ("gameover", getGameover),
         ("leftplayer", getLeftPlayer),
         ("rightplayer", getRightPlayer)]
-  play window white 3 world (renderState background assets gameOverScreen) gameHandler timeHandler
+  play window white 10 world (renderState background assets gameOverScreen) gameHandler timeHandler
 
 
 units :: [Unit]
