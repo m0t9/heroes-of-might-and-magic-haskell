@@ -109,6 +109,7 @@ data State
   | Attacking GameState Unit Coords Unit CellPart PostAttackParameter
   | CounterAttacking GameState Unit (Maybe Unit) CellPart PostAttackParameter
   | PostAttacking GameState (Maybe Unit) PostAttackParameter
+  | GameOver GameState Player
 
 data PostAttackParameter
   = HarpyReturnPoint Coords
@@ -119,6 +120,7 @@ gameHandler :: Event -> State -> State
 --gameHandler _event (NoSelected gameState)    = noSelectedStateHandler _event (NoSelected gameState)
 gameHandler _event (Selected gameState unit) = selectedStateHandler _event (Selected gameState unit)
 gameHandler _event (Moving gameState unit crds animation) = (Moving gameState unit crds animation)
+gameHandler _event (GameOver _gameState _player) = gameOverHandler _event (GameOver _gameState _player)
 gameHandler _event _s = _s
 
 
@@ -472,9 +474,53 @@ selectedStateHandler :: Event -> State -> State
 selectedStateHandler (EventKey (SpecialKey KeyEsc) Down _ _) (Selected gameState unit) = Selected gameState unit
 selectedStateHandler (EventKey (SpecialKey KeySpace) Down _ _) (Selected gameState unit) = skipTurn (Selected gameState unit)
 selectedStateHandler (EventKey (MouseButton LeftButton) Down _ (x, y)) state = determineAction' state (float2Double x, float2Double y)
-selectedStateHandler _e _st = _st
+selectedStateHandler _e (Selected gameState unit) = case filterEnemy player units of
+  [] -> GameOver gameState player
+  _ -> Selected gameState unit
+  where
+    (GameState units player _queue _r) = gameState
+selectedStateHandler _e st = st
+gameOverHandler :: Event -> State -> State
+gameOverHandler (EventKey (SpecialKey KeyEnter) Down _ _ ) (GameOver _gameState _player) = Selected (GameState unitsStart firstPlayer sortedUnits 0) firstUnit
+  where
+    firstUnit = getFirstUnit sortedUnits
+    firstPlayer = determineTheFirst sortedUnits
+    sortedUnits = sortUnits unitsStart
+gameOverHandler _event state = state
 
 timeHandler :: Float -> State -> State
 timeHandler _dt (Moving gameState unit coords animation) = moveCharacter (Moving gameState unit coords animation) coords
 timeHandler _dt (AttackMoving _gs _at coords _v _d _an _param) = moveBeforeAttack (AttackMoving _gs _at coords _v _d _an _param) 
 timeHandler _dt state = state
+
+
+playerLeft :: Player
+playerLeft = Player LeftPlayer
+playerRight :: Player
+playerRight = Player RightPlayer
+unitsStart :: [Unit]
+unitsStart = [
+    createUnit Pikeman playerLeft (0, 0) 100,
+    createUnit Archer playerLeft (0, 1) 100,
+    createUnit Swordsman playerLeft (0, 2) 100,
+    createUnit Monk playerLeft (0, 3) 100,
+    createUnit Dwarf playerLeft (0, 4) 100,
+    createUnit WoodElf playerLeft (0, 5) 100,
+    createUnit DenroidGuard playerLeft (0, 6) 100,
+    createUnit Troglodyte playerLeft (0, 7) 100,
+    createUnit Harpy playerLeft (0, 8) 100,
+    createUnit Beholder playerLeft (0, 9) 100,
+    createUnit Minotaur playerLeft (0, 10) 100,
+
+    createUnit Pikeman playerRight (14, 0) 10,
+    createUnit Archer playerRight (14, 1) 10,
+    createUnit Swordsman playerRight (14, 2) 10,
+    createUnit Monk playerRight (14, 3) 10,
+    createUnit Dwarf playerRight (14, 4) 10,
+    createUnit WoodElf playerRight (14, 5) 10,
+    createUnit DenroidGuard playerRight (14, 6) 10,
+    createUnit Troglodyte playerRight (14, 7) 10,
+    createUnit Harpy playerRight (14, 8) 10,
+    createUnit Beholder playerRight (14, 9) 10,
+    createUnit Minotaur playerRight (14, 10) 10
+  ]
