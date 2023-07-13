@@ -6,7 +6,7 @@
 {-# HLINT ignore "Use <$>" #-}
 module Game where
 import Utils (getPath, sign, CellCoords, FieldSize)
-import Random (JavaRandom, randomInt)
+import Random (JavaRandom, randomInt, runJavaRandom)
 import Data.Maybe (fromMaybe, isJust)
 import Control.Monad (replicateM)
 import GHC.Float (int2Double)
@@ -16,20 +16,20 @@ import Data.List (sortBy)
 
 -- | Game related data types
 data GameState = GameState {getUnits :: [Unit], turn :: Player, queue :: [Unit], seed :: Int}
-data PlayerType = LeftPlayer | RightPlayer deriving (Eq)
-data Player = Player {getType :: PlayerType } deriving (Eq)
+data PlayerType = LeftPlayer | RightPlayer deriving (Eq, Show)
+data Player = Player {getType :: PlayerType } deriving (Eq, Show)
 
 -- | Unit related data types
 data UnitType =
   Pikeman | Archer | Swordsman | Monk        -- | Castle fraction
   | Dwarf | WoodElf | DenroidGuard           -- | Rampart fraction
   | Troglodyte | Harpy | Beholder | Minotaur -- | Dungeon fraction
-  deriving (Eq)
-data UnitProps = UnitProps {getAttackPoints :: Int, getDefensePoints :: Int, getDamage :: [Int], getHealth :: Int, getSpeed :: Int, getAmmo :: Int, isFlying :: Bool} deriving (Eq)
+  deriving (Eq, Show)
+data UnitProps = UnitProps {getAttackPoints :: Int, getDefensePoints :: Int, getDamage :: [Int], getHealth :: Int, getSpeed :: Int, getAmmo :: Int, isFlying :: Bool} deriving (Eq, Show)
 
-data UnitState = UnitState {getProps :: UnitProps, getPlayer :: Player, getCoords :: CellCoords, getHealthOfLast :: Int, getCurrentAmmo :: Int, getStackSize :: Int} deriving (Eq)
+data UnitState = UnitState {getProps :: UnitProps, getPlayer :: Player, getCoords :: CellCoords, getHealthOfLast :: Int, getCurrentAmmo :: Int, getStackSize :: Int} deriving (Eq, Show)
 
-data Unit = Unit {getUnitType :: UnitType, getUnitState :: UnitState}
+data Unit = Unit {getUnitType :: UnitType, getUnitState :: UnitState} deriving (Show)
 
 instance (Eq Unit) where
   (Unit a b) == (Unit c d) = (a == c) && b == d
@@ -77,7 +77,8 @@ getInitialProps WoodElf      = UnitProps 9 5 [3..5] 15 6 24 False    -- Tier 3
 getInitialProps DenroidGuard = UnitProps 9 12 [10..14] 55 3 0 False  -- Tier 5
 -- || Dungeon fraction
 getInitialProps Troglodyte = UnitProps 4 3 [1..3] 5 4 0 False      -- Tier 2
-getInitialProps Harpy      = UnitProps 9 5 [3..5] 15 6 0 True     -- Tier 3
+getInitialProps Harpy      = UnitProps 9 5 [3..5] 15 15 0 True     -- Tier 3
+-- getInitialProps Harpy      = UnitProps 9 5 [3..5] 15 6 0 True     -- Tier 3
 getInitialProps Beholder   = UnitProps 9 12 [10..14] 55 3 24 False  -- Tier 5
 getInitialProps Minotaur   = UnitProps 9 12 [10..14] 55 3 0 False  -- Tier 5
 
@@ -134,7 +135,7 @@ getInteractableEntities :: GameState -> Unit -> [Unit]
 getInteractableEntities gameState unit@(Unit unitType _) = (getInteractableEntitiesFunc unitType) gameState unit
 
 
-data AttackResult = AttackResult {getDamager :: Maybe Unit, getVictim :: Maybe Unit}
+data AttackResult = AttackResult {getDamager :: Maybe Unit, getVictim :: Maybe Unit} deriving (Show)
 
 -- | Attack functions
 meleeAttackWithMultiplier
@@ -157,11 +158,12 @@ meleeAttackWithMultiplier coefficient (Unit unitType1 state1) (Unit unitType2 st
   let i = getAttackPoints (getProps state1) - getDefensePoints (getProps state2)
   let damageCoefficient = (1.0 + 0.1 * (int2Double (sign i))) ^ abs i
 
-  let finalDamage = floor (totalDamage * int2Double stackSize * damageCoefficient)
+  let finalDamage = floor (totalDamage * damageCoefficient)
 
   let health2 = (getHealth (getProps state2))
   let totalHealth = (getHealthOfLast state2) + (getStackSize state2 - 1) * health2
-  let finalHealth = totalHealth - finalDamage 
+
+  let finalHealth = totalHealth - finalDamage
 
   let movedUnit1 = Unit unitType1 (changeStateCoords state1 attackCoords)
 
@@ -182,7 +184,7 @@ meleeAttack
   -> Unit   -- | Victim
   -> CellCoords -- | Coords from which unit will attack
   -> JavaRandom AttackResult
-meleeAttack = meleeAttackWithMultiplier 1.0 
+meleeAttack = meleeAttackWithMultiplier 1.0
 
 rangeAttack
   :: Unit   -- | Damager
@@ -192,7 +194,7 @@ rangeAttack
 rangeAttack unit1@(Unit _ state1) unit2@(Unit _ state2) coords = do
   let isClose = length (getPath (getCoords state1) (getCoords state2)) - 1 <= 1
   if isClose || getCurrentAmmo state2 <= 0
-    then (counterAttackAttackWrapper (meleeAttackWithMultiplier 0.5)) unit1 unit2 coords
+    then (counterAttackWrapper (meleeAttackWithMultiplier 0.5)) unit1 unit2 coords
     else do
       attackResult@(AttackResult damager victim) <- meleeAttack unit1 unit2 (getCoords state1)
 
@@ -202,36 +204,42 @@ rangeAttack unit1@(Unit _ state1) unit2@(Unit _ state2) coords = do
           return (AttackResult (Just (Unit damagerType newDamageState)) victim)
         Nothing -> return attackResult
 
-counterAttackAttackWrapper :: (Unit -> Unit -> CellCoords -> JavaRandom AttackResult) -> Unit -> Unit -> CellCoords -> JavaRandom AttackResult
-counterAttackAttackWrapper func unit1 unit2 attackCoords = do
+counterAttackWrapper :: (Unit -> Unit -> CellCoords -> JavaRandom AttackResult) -> Unit -> Unit -> CellCoords -> JavaRandom AttackResult
+counterAttackWrapper func unit1 unit2 attackCoords = do
     firstAttack <- func unit1 unit2 attackCoords
     counterAttackIfPossibleFunc firstAttack
   where
     counterAttackIfPossibleFunc :: AttackResult -> JavaRandom AttackResult
     counterAttackIfPossibleFunc attackResult@(AttackResult damager victim) = fromMaybe defaultValue maybeValue
       where
+        attackResultSwapper :: AttackResult -> JavaRandom AttackResult
+        attackResultSwapper attackResult' = do
+          let AttackResult finalVictim finalDamager = attackResult'
+          return (AttackResult finalDamager finalVictim) 
+
         defaultValue = return attackResult
         maybeValue = do
           victimValue@(Unit _ victimState) <- victim
           damagerValue <- damager
-          return (attack victimValue damagerValue (getCoords victimState))
+          
+          return ((attack victimValue damagerValue (getCoords victimState)) >>= attackResultSwapper)
 
 
 getAttackFunc :: UnitType -> (Unit -> Unit -> CellCoords -> JavaRandom AttackResult)
 -- ||| Castle fraction
-getAttackFunc Pikeman      = counterAttackAttackWrapper meleeAttack
-getAttackFunc Swordsman    = counterAttackAttackWrapper meleeAttack
+getAttackFunc Pikeman      = counterAttackWrapper meleeAttack
+getAttackFunc Swordsman    = counterAttackWrapper meleeAttack
 getAttackFunc Archer       = rangeAttack
 getAttackFunc Monk         = rangeAttack
 -- ||| Rampart fraction
-getAttackFunc Dwarf        = counterAttackAttackWrapper meleeAttack
+getAttackFunc Dwarf        = counterAttackWrapper meleeAttack
 getAttackFunc WoodElf      = rangeAttack
-getAttackFunc DenroidGuard = counterAttackAttackWrapper meleeAttack
+getAttackFunc DenroidGuard = counterAttackWrapper meleeAttack
 -- ||| Dungeon fraction
-getAttackFunc Troglodyte   = counterAttackAttackWrapper meleeAttack
-getAttackFunc Harpy        = counterAttackAttackWrapper meleeAttack
+getAttackFunc Troglodyte   = counterAttackWrapper meleeAttack
+getAttackFunc Harpy        = counterAttackWrapper meleeAttack
 getAttackFunc Beholder     = rangeAttack
-getAttackFunc Minotaur     = counterAttackAttackWrapper meleeAttack
+getAttackFunc Minotaur     = counterAttackWrapper meleeAttack
 
 attack
   :: Unit   -- | Damager
