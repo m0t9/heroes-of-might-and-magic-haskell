@@ -28,6 +28,8 @@ stackColor :: Color
 stackColor = makeColor 0.38 0.129 0.631 1
 hpColor :: Color
 hpColor = makeColor 0.282 0.188 0.102 1
+statsColor :: Color
+statsColor = makeColor 0.45 0.255 0.102 1
 
 currentConversion :: CellCoords -> DoubleCoords
 currentConversion hexCoords = hexToCoords offset hexCoords hexSide
@@ -143,7 +145,7 @@ drawUnitCells units = pictures (map unitCell units)
 
 renderUnit :: CellCoords -> Unit -> (Unit -> [(UnitType, Picture)] -> Picture) -> [(UnitType, Picture)] -> Picture
 renderUnit (x, y) unit renderer assets = 
-  translate (realToFrac realX) (realToFrac realY + 10) (scale cellPlayerDirection 1 (renderer unit assets)) -- unit itself
+  translate (realToFrac realX) (realToFrac realY) (scale cellPlayerDirection 1 (renderer unit assets)) -- unit itself
     <> translate (realToFrac realXSt) (realToFrac realYSt) (displayStackSize unit)
     <> translate (realToFrac realXHP)  (realToFrac realYHP) (displayHP unit)
   where
@@ -204,9 +206,10 @@ getImage name = do
 
 -- Draw unit stats
 displayStats
-  :: Unit       -- Unit to draw his stats
+  :: Picture    -- Stats backgrou
+  -> Unit       -- Unit to draw his stats
   -> Picture
-displayStats unit = stats
+displayStats initBg unit = bg <> stats
   where
     state = getUnitState unit
     props = getProps state
@@ -226,17 +229,9 @@ displayStats unit = stats
 
     renderListText [] _ = blank
     renderListText (p : ps) ind = 
-      translate 0 ((-11) * fromIntegral ind) (getTextPic p) <>
+      translate 0 ((-13) * fromIntegral ind) (getTextPic p) <>
         renderListText ps (ind + 1)
     
+    bg = initBg
     stats = renderListText statsList 0
-
-
-
-
-
-
-
-    
-
     

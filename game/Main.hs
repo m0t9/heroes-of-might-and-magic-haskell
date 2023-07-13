@@ -18,6 +18,7 @@ world = Selected (GameState units firstPlayer sortedUnits 0) firstUnit
 main :: IO ()
 main = do
   background <- getImage "background"
+  statsBackground <- getImage "stats"
   getArcher <- getImage "archer"
   getPikeman <- getImage "pikeman"
   getSwordsman <- getImage "swordsman"
