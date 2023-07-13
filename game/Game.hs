@@ -77,8 +77,8 @@ getInitialProps WoodElf      = UnitProps 9 5 [3..5] 15 6 24 False    -- Tier 3
 getInitialProps DenroidGuard = UnitProps 9 12 [10..14] 55 3 0 False  -- Tier 5
 -- || Dungeon fraction
 getInitialProps Troglodyte = UnitProps 4 3 [1..3] 5 4 0 False      -- Tier 2
-getInitialProps Harpy      = UnitProps 9 5 [3..5] 15 6 24 True     -- Tier 3
-getInitialProps Beholder   = UnitProps 9 12 [10..14] 55 3 0 False  -- Tier 5
+getInitialProps Harpy      = UnitProps 9 5 [3..5] 15 6 0 True     -- Tier 3
+getInitialProps Beholder   = UnitProps 9 12 [10..14] 55 3 24 False  -- Tier 5
 getInitialProps Minotaur   = UnitProps 9 12 [10..14] 55 3 0 False  -- Tier 5
 
 -- | Attack strategies
@@ -125,8 +125,8 @@ getInteractableEntitiesFunc WoodElf      = filterEnemyWrapper getRangedAttackabl
 getInteractableEntitiesFunc DenroidGuard = filterEnemyWrapper getMeleeAttackableEntities
 -- ||| Dungeon fraction
 getInteractableEntitiesFunc Troglodyte   = filterEnemyWrapper getMeleeAttackableEntities
-getInteractableEntitiesFunc Harpy        = filterEnemyWrapper getRangedAttackableEntities
-getInteractableEntitiesFunc Beholder     = filterEnemyWrapper getMeleeAttackableEntities
+getInteractableEntitiesFunc Harpy        = filterEnemyWrapper getMeleeAttackableEntities
+getInteractableEntitiesFunc Beholder     = filterEnemyWrapper getRangedAttackableEntities
 getInteractableEntitiesFunc Minotaur     = filterEnemyWrapper getMeleeAttackableEntities
 
 -- ||| Strategies for each unit
@@ -229,7 +229,7 @@ getAttackFunc WoodElf      = rangeAttack
 getAttackFunc DenroidGuard = counterAttackAttackWrapper meleeAttack
 -- ||| Dungeon fraction
 getAttackFunc Troglodyte   = counterAttackAttackWrapper meleeAttack
-getAttackFunc Harpy        = rangeAttack
+getAttackFunc Harpy        = counterAttackAttackWrapper meleeAttack
 getAttackFunc Beholder     = rangeAttack
 getAttackFunc Minotaur     = counterAttackAttackWrapper meleeAttack
 
