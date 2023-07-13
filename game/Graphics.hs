@@ -53,6 +53,22 @@ renderState background assets (Moving state _unit _coords _animation) =
   background <> renderField units assets
   where
     (GameState units _turn _queue _r) = state
+renderState background assets (AttackMoving state _damager _coords _victim _d _animation _param) = 
+  background <> renderField units assets
+  where
+    (GameState units _turn _queue _r) = state    
+renderState background assets (Attacking state _damager _coords _victim _d _param) = 
+  background <> renderField units assets
+  where
+    (GameState units _turn _queue _r) = state      
+renderState background assets (CounterAttacking state _damager _postDamager _d _param) = 
+  background <> renderField units assets
+  where
+    (GameState units _turn _queue _r) = state    
+renderState background assets (PostAttacking state _post _param) = 
+  background <> renderField units assets
+  where
+    (GameState units _turn _queue _r) = state       
 
 renderSelection :: GameState -> Unit -> Picture
 renderSelection gameState unit = pictures (map selectedCell (getCellsToMove unit gameState))

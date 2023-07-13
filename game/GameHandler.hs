@@ -7,7 +7,7 @@ import GHC.Float (float2Double)
 import Utils
 import Graph
 import Data.List (delete)
-import Data.Maybe (isNothing, isJust)
+import Data.Maybe (isNothing, isJust, catMaybes, fromJust)
 
 
 hexToCoords:: Offset -> CellCoords -> Double -> DoubleCoords
@@ -18,7 +18,7 @@ hexToCoords (xOffset, yOffset) (xHex, yHex) side =
     y = fromIntegral yHex
     yShift = side * (1+ 1.5*y)--(1 + (2*y))
     xShift
-      | even yHex = (sqrt 3) * side * (1 + x) 
+      | even yHex = (sqrt 3) * side * (1 + x)
       | otherwise = (sqrt 3) * side * (1/2 + x)
 
 hexToCoordsHMM3 :: CellCoords -> DoubleCoords
@@ -30,8 +30,8 @@ isInHex (x, y) (xHexCenter, yHexCenter) side
   | otherwise                                                                           = True
 
 coordsToHexHMM3 :: DoubleCoords -> Maybe CellCoords
-coordsToHexHMM3 coords 
-  = coordsToHexWithDomain offset coords hexSide (15, 11)  
+coordsToHexHMM3 coords
+  = coordsToHexWithDomain offset coords hexSide (15, 11)
 coordsToHexWithDomain
   :: Offset
   -> DoubleCoords
@@ -44,7 +44,7 @@ coordsToHexWithDomain offsetSize coords side (xMaxHex, yMaxHex)
       Just (x, y) -> result
         where
           result
-            | (x > xMaxHex) || (y > yMaxHex) 
+            | (x > xMaxHex) || (y > yMaxHex)
              || (x < 0) || (y < 0) = Nothing
             | otherwise            = Just (x, y)
 
@@ -77,8 +77,8 @@ coordsToHex (xOffset, yOffset) (x, y) side
       | otherwise               = Nothing
 
 
-isAngleMoreThen30InHex :: DoubleCoords -> DoubleCoords -> Bool
-isAngleMoreThen30InHex (xCenter, yCenter) (x, y)
+isVerticalPart :: DoubleCoords -> DoubleCoords -> Bool
+isVerticalPart (xCenter, yCenter) (x, y)
   | cot > sqrt 3 = False
   | otherwise    = True
   where
@@ -87,36 +87,47 @@ isAngleMoreThen30InHex (xCenter, yCenter) (x, y)
     leg2 = abs (y - yCenter)
 
 determineCellPartHex :: DoubleCoords -> CellCoords -> CellPart
-determineCellPartHex coords hexCoords = determineCellPart coords (hexToCoordsHMM3 hexCoords) 
+determineCellPartHex coords hexCoords = determineCellPart coords (hexToCoordsHMM3 hexCoords)
 determineCellPart :: DoubleCoords -> DoubleCoords -> CellPart
 determineCellPart (x, y) (xCenter, yCenter)
-  | (x > xCenter) && (y > yCenter) && isInVerticalPart            = UR
-  | (x < xCenter) && (y > yCenter) && isInVerticalPart            = UL
-  | (x > xCenter) && (y < yCenter) && isInVerticalPart            = DR
-  | (x < xCenter) && (y < yCenter) && isInVerticalPart            = DL
-  | ((x > xCenter) && (y > yCenter) && (not isInVerticalPart))
-    || ((x > xCenter) && (y < yCenter) && (not isInVerticalPart)) = R
+  | (x > xCenter) && (y > yCenter) && verticalPart            = UR
+  | (x < xCenter) && (y > yCenter) && verticalPart            = UL
+  | (x > xCenter) && (y < yCenter) && verticalPart            = DR
+  | (x < xCenter) && (y < yCenter) && verticalPart            = DL
+  | ((x > xCenter) && (y > yCenter) && (not verticalPart))
+    || ((x > xCenter) && (y < yCenter) && (not verticalPart)) = R
   | otherwise                                                     = L
     where
-        isInVerticalPart = isAngleMoreThen30InHex (x, y) (xCenter, yCenter)
+        verticalPart = isVerticalPart (x, y) (xCenter, yCenter)
 
 type Animation = Maybe [Coords]
 
-data State = Selected GameState Unit | Moving GameState Unit Coords Animation
+data State
+  = Selected GameState Unit
+  | Moving GameState Unit Coords Animation
+  | AttackMoving GameState Unit Coords Unit CellPart Animation PostAttackParameter
+  | Attacking GameState Unit Coords Unit CellPart PostAttackParameter
+  | CounterAttacking GameState Unit (Maybe Unit) CellPart PostAttackParameter
+  | PostAttacking GameState (Maybe Unit) PostAttackParameter
+
+data PostAttackParameter
+  = HarpyReturnPoint Coords
+  | NoParams  
 
 
-gameHandler :: Event -> State -> State 
+gameHandler :: Event -> State -> State
 --gameHandler _event (NoSelected gameState)    = noSelectedStateHandler _event (NoSelected gameState)
 gameHandler _event (Selected gameState unit) = selectedStateHandler _event (Selected gameState unit)
 gameHandler _event (Moving gameState unit crds animation) = (Moving gameState unit crds animation)
+gameHandler _event _s = _s
 
 
 getUnitCoords::Unit -> CellCoords
-getUnitCoords (Unit _ (UnitState _ _ coords _ _ _)) = coords 
+getUnitCoords (Unit _ (UnitState _ _ coords _ _ _)) = coords
 
 
 getCoordsOfUnits:: [Unit] -> [CellCoords]
-getCoordsOfUnits = map getUnitCoords 
+getCoordsOfUnits = map getUnitCoords
 
 
 getFriendlyCoords :: Player -> [Unit] -> [CellCoords]
@@ -132,7 +143,7 @@ getNeighbourCell (x, y) dir
     UL -> (x, y+1)
     DR -> (x+1, y-1)
     DL -> (x, y-1)
-  | otherwise = case dir of 
+  | otherwise = case dir of
     UR -> (x, y+1)
     UL -> (x-1, y+1)
     DR -> (x, y-1)
@@ -141,14 +152,14 @@ getNeighbourCell (x, y) dir
 findUnit:: CellCoords -> [Unit] -> Maybe Unit
 findUnit _ [] = Nothing
 findUnit coords (unit:units)
-  | coords == (getUnitCoords unit) = Just unit 
+  | coords == (getUnitCoords unit) = Just unit
   | otherwise                      = findUnit coords units
 
 
 selectFriendlyUnit :: GameState -> CellCoords -> Maybe Unit
 selectFriendlyUnit gameState coords = findUnit coords friendlyUnits
-  where 
-    friendlyUnits = filterFriendly (turn gameState) (getUnits gameState) 
+  where
+    friendlyUnits = filterFriendly (turn gameState) (getUnits gameState)
 
 doesExistInList :: CellCoords -> [CellCoords] -> Bool
 doesExistInList _ [] = False
@@ -169,17 +180,17 @@ clickToAction state@(Selected gameState unit) coords = case coordsToHexHMM3 coor
   Nothing -> NoAction
   Just hexCoords -> hexToAction state (Hex hexCoords (determineCellPartHex coords hexCoords))
 
-clickToAction _s _ = NoAction 
+clickToAction _s _ = NoAction
 
 hexToAction :: State -> HexClick -> Action
 hexToAction state@(Selected gameState unit) (Hex coords part)
   | isMovable state coords = Move coords
   | isJust victim = isAttackable state justVictim part
-  | otherwise = NoAction 
-  where 
+  | otherwise = NoAction
+  where
     victim = isInteractable gameState unit coords
     Just justVictim = victim
-hexToAction _ _ = NoAction  
+hexToAction _ _ = NoAction
 
 isAttackable :: State -> Unit -> CellPart -> Action
 isAttackable state@(Selected gameState damager) victim part
@@ -192,26 +203,40 @@ isAttackable state@(Selected gameState damager) victim part
     damagerCell = getUnitCoords damager
     isDamager = attackCell == damagerCell
     attackDirection = invertDirection part
-isAttackable _ _ _ = NoAction  
+isAttackable _ _ _ = NoAction
 
-invertDirection :: CellPart -> CellPart 
+invertDirection :: CellPart -> CellPart
 invertDirection UR =  DL
 invertDirection UL =  DR
 invertDirection DR =  UL
 invertDirection DL =  UR
 invertDirection R =  L
-invertDirection L =  R   
+invertDirection L =  R
 
-determineAction' :: State -> DoubleCoords -> State 
+determineAction' :: State -> DoubleCoords -> State
 determineAction' state@(Selected gameState unit) coords = case clickToAction state coords of
-  NoAction -> state
-  Skip -> skipTurn state
-  Move moveCoords -> moveCharacter state moveCoords
-  Attack (RangeAttack victim attackCell) -> performAttack state unit victim attackCell
-  Attack (MeleeAttack victim attackCell attackDirection) -> performAttack state unit victim attackCell
-determineAction' _s _ = _s  
+  NoAction 
+   -> state
+  Skip 
+   -> skipTurn state
+  Move moveCoords 
+   -> moveCharacter state moveCoords
+  Attack (RangeAttack victim rangeAttackCell) 
+   -> attackPhase (Attacking gameState unit rangeAttackCell victim R param)
+    where 
+      param = determinePostAttackParameter unit
+  Attack (MeleeAttack victim meleeAttackCell attackDirection)
+   -> moveBeforeAttack (AttackMoving gameState unit meleeAttackCell victim attackDirection animation param)
+    where
+      animation = getAnimationPath gameState unit meleeAttackCell
+      param = determinePostAttackParameter unit
+determineAction' _s _ = _s
 
-
+determinePostAttackParameter :: Unit -> PostAttackParameter
+determinePostAttackParameter (Unit Harpy state) = HarpyReturnPoint (getCoords state)
+determinePostAttackParameter _ = NoParams 
+replaceSeed :: GameState -> Int -> GameState
+replaceSeed (GameState _u _p _q _s) = GameState _u _p _q
 
 determineAction :: State -> DoubleCoords -> State
 determineAction (Selected gameState unit) coords =
@@ -221,31 +246,32 @@ determineAction (Selected gameState unit) coords =
       then moveCharacter (Selected gameState unit) (x, y)
       else case isAttackableFrom coords (x, y)  (Selected gameState unit) of
         Nothing -> Selected gameState unit
-        Just (place, victim) -> performAttack (Selected gameState unit) unit victim place  
+        Just (place, victim) -> performAttack (Selected gameState unit) unit victim place
 determineAction state _ = state
 
-performAttack 
-  :: State 
-  -> Unit  
+
+performAttack
+  :: State
+  -> Unit
   -> Unit
   -> CellCoords
   -> State
 performAttack (Selected gameState unit) damager victim place = newState
-  where 
+  where
     newState = Selected newGameState newUnit
     result = attack damager victim place
-    (newSeed, (AttackResult postDamager postVictim)) = runJavaRandom result seed
-    GameState units player queue seed = gameState
+    (newSeed, AttackResult postDamager postVictim) = runJavaRandom result seed
+    GameState units _player queue seed = gameState
     newQueue = replaceAttackUnits (moveUnitToQueueEnd unit queue)
     newUnits = replaceAttackUnits units
     replaceAttackUnits unitList = replaceIfAlive (replaceIfAlive unitList (victim, postVictim)) (damager, postDamager)
     newUnit = getFirstUnit newQueue
-    (Unit unitType unitState) = newUnit
+    (Unit _unitType unitState) = newUnit
     newPlayer = getPlayer unitState
     newGameState = GameState newUnits newPlayer newQueue newSeed
-    
 
-performAttack s_ _ _ _ = s_    
+
+performAttack s_ _ _ _ = s_
 
 
 replaceIfAlive :: [Unit] -> (Unit, Maybe Unit) -> [Unit]
@@ -254,30 +280,30 @@ replaceIfAlive units (unit, postUnit) = case postUnit of
   Just newUnit -> replace unit newUnit units
 
 isInteractable :: GameState -> Unit -> CellCoords -> Maybe Unit
-isInteractable state unit coords = findUnit coords (getInteractableEntities state unit) 
+isInteractable state unit coords = findUnit coords (getInteractableEntities state unit)
 
 isEnemy :: Unit -> Unit -> Bool
 isEnemy (Unit _ state1) (Unit _ state2) = getPlayer state1 == getPlayer state2
 
 
 isAttackableFrom :: DoubleCoords -> CellCoords -> State -> Maybe (CellCoords, Unit)
-isAttackableFrom coords cellCoords state = case isInteractable gameState damager cellCoords of
+isAttackableFrom coords cellCoords state@(Selected gameState damager) = case isInteractable gameState damager cellCoords of
   Nothing -> Nothing
   Just victim -> if isMovable'
     then Just (neighbourCell, victim)
     else Nothing
-  where 
-    Selected gameState damager = state
-    isMovable' = (isMovable state neighbourCell) || (neighbourCell == (getUnitCoords damager)) 
+  where
+    isMovable' = (isMovable state neighbourCell) || (neighbourCell == (getUnitCoords damager))
     neighbourCell = getNeighbourCell cellCoords part
     part = determineCellPart coords hexCenter
     hexCenter = hexToCoordsHMM3 cellCoords
+isAttackableFrom _ _ _ = Nothing
 
 getFirstUnit :: [Unit] -> Unit
 getFirstUnit (y:ys) = y
 
 updateFirstUnit :: [Unit] -> (UnitState -> field -> UnitState) -> field -> [Unit]
-updateFirstUnit (unit:units) changeFunction field = (changeUnitState unit changeFunction field) : units
+updateFirstUnit (unit:units) changeFunction field = changeUnitState unit changeFunction field : units
 updateFirstUnit [] _ _ = []
 
 updateLastUnit :: [Unit] -> (UnitState -> field -> UnitState) -> field -> [Unit]
@@ -296,7 +322,7 @@ graph = generateGraph 15 11
 
 skipTurn :: State -> State
 skipTurn (Selected gameState unit) = Selected updatedGameState updatedUnit
-  where 
+  where
     (GameState _units _ queue r_) = gameState
     updatedQueue = moveUnitToQueueEnd unit queue
     updatedUnit = getFirstUnit updatedQueue
@@ -306,17 +332,14 @@ skipTurn (Selected gameState unit) = Selected updatedGameState updatedUnit
 skipTurn _s = _s
 
 moveCharacter :: State -> CellCoords -> State
-moveCharacter (Selected gameState unit) crds = Moving newGameState unit crds newAnimation
+moveCharacter (Selected gameState unit) crds = Moving gameState unit crds newAnimation
   where
-    (GameState units (Player turn) queue r_) = gameState
-    (Unit unitType unitProps) = unit
     newAnimation = getAnimationPath gameState unit crds
-    updatedUnits = moveUnitToQueueStart unit units
-    newGameState = GameState updatedUnits (Player turn) queue r_
-   
-moveCharacter (Moving (GameState units (Player turn) queue r_) unit _crdsState animation) crds
-  | (unitCoords == crds) = Selected (GameState units finalPlayer finalQueue r_) finalUnit
-  | otherwise = Moving (GameState updatedUnits (Player turn) updatedQueue r_) updatedUnit crds updatedAnimation
+
+
+moveCharacter (Moving (GameState units (Player turn) queue _r) unit _crdsState animation) crds
+  | (unitCoords == crds) = Selected (GameState units finalPlayer finalQueue _r) finalUnit
+  | otherwise = Moving (GameState updatedUnits (Player turn) updatedQueue _r) updatedUnit crds updatedAnimation
   where
     (frame, updatedAnimation) = getFrame animation
 
@@ -325,9 +348,92 @@ moveCharacter (Moving (GameState units (Player turn) queue r_) unit _crdsState a
     finalPlayer = determineTheFirst finalQueue
 
     unitCoords = getUnitCoords unit
-    updatedUnit = changeUnitState unit changeStateCoords frame 
-    updatedQueue = updateFirstUnit queue changeStateCoords frame
-    updatedUnits = updateFirstUnit units changeStateCoords frame
+    updatedUnit = changeUnitState unit changeStateCoords frame
+    updatedQueue = replace unit updatedUnit queue
+    updatedUnits = replace unit updatedUnit units
+moveCharacter _s _ = _s
+
+moveBeforeAttack :: State -> State
+moveBeforeAttack (AttackMoving gameState unit coords _v _d animation _param)
+  | getUnitCoords unit == coords = attackPhase (Attacking gameState unit coords _v _d _param)
+  | otherwise                    = AttackMoving newGameState updatedUnit coords _v _d updatedAnimation _param
+    where 
+      (frame, updatedAnimation) = getFrame animation
+      GameState units _p queue _r = gameState
+      updatedUnit = changeUnitState unit changeStateCoords frame
+      updatedQueue = updateFirstUnit queue changeStateCoords frame
+      updatedUnits = replace unit updatedUnit units
+      newGameState = GameState updatedUnits _p updatedQueue _r
+
+moveBeforeAttack s_ = s_
+
+attackPhase :: State -> State
+attackPhase (Attacking gameState damager coords victim _d _param) = case postVictim of
+ -- Nothing -> PostAttacking newGameState (Just damager) _param
+  Nothing -> selected
+  Just _ -> counterAttackPhase (CounterAttacking newGameState damager postDamager _d _param) 
+  where
+    GameState units _p queue seed = gameState
+    (newSeed, attackResult) = runJavaRandom (attack damager victim coords) seed
+    newGameState = GameState newUnits newPlayer newQueue newSeed
+    postDamager = getDamager attackResult
+    postVictim = getVictim attackResult
+    newUnit = getFirstUnit newQueue
+    newPlayer = getPlayer (getUnitState newUnit)
+    newUnits = replaceIfAlive units (victim, postVictim)
+    newQueue = replaceIfAlive queue (victim, postVictim)
+    selected = Selected selectedGameState selectedUnit
+    selectedQueue = replaceIfAlive (moveUnitToQueueEnd newUnit queue) (victim, postVictim)
+    selectedUnit = getFirstUnit selectedQueue
+    selectedPlayer = getPlayer (getUnitState selectedUnit)   
+    selectedGameState = GameState newUnits selectedPlayer selectedQueue newSeed
+
+attackPhase _s = _s
+
+counterAttackPhase :: State -> State
+-- counterAttackPhase (CounterAttacking gameState damager postDamager _d _param) = postAttackPhase (PostAttacking newGameState postDamager _param)
+counterAttackPhase (CounterAttacking gameState damager postDamager _d _param) = selected
+  where
+     GameState units _p queue _s = gameState
+     newGameState = GameState newUnits newPlayer newQueue _s
+     newUnits = replaceIfAlive units (damager, postDamager)
+     newQueue = replaceIfAlive queue (damager, postDamager)
+     newUnit = getFirstUnit newQueue
+     newPlayer = getPlayer (getUnitState newUnit)
+     selected = Selected selectedGameState selectedUnit
+     selectedQueue = replaceIfAlive (moveUnitToQueueEnd newUnit queue) (damager, postDamager)
+     selectedUnit = getFirstUnit selectedQueue
+     selectedPlayer = getPlayer (getUnitState selectedUnit)   
+     selectedGameState = GameState newUnits selectedPlayer selectedQueue _s
+     
+counterAttackPhase _s = _s
+
+postAttackPhase :: State -> State
+postAttackPhase (PostAttacking gameState postUnit param) = case param of
+  NoParams -> selected
+    where 
+      (GameState units _p queue _r) = gameState
+      newGameState = GameState units newPlayer newQueue _r
+      unit = getFirstUnit queue
+      newQueue = moveUnitToQueueEnd unit queue
+      newUnit = getFirstUnit newQueue
+      newPlayer = getPlayer (getUnitState newUnit)
+      selected = Selected newGameState newUnit
+  HarpyReturnPoint coords -> selected
+    where 
+      (GameState units _p queue _r) = gameState
+      newGameState = GameState units newPlayer newQueue _r
+      unit = getFirstUnit queue
+      newQueue = moveUnitToQueueEnd unit queue
+      newUnit = getFirstUnit newQueue
+      newPlayer = getPlayer (getUnitState newUnit)
+      selected = Selected newGameState newUnit
+      movingBack = Selected gameState unit
+      harpyReturn = case postUnit of
+        Just _ -> moveCharacter movingBack coords
+        Nothing -> selected
+     
+postAttackPhase _s = _s  
 
 getAnimationPath :: GameState -> Unit -> Coords -> Maybe [Coords]
 getAnimationPath _state (Unit Harpy props) coords = findPath graph (getUnitCoords (Unit Harpy props)) coords (const False)
@@ -355,7 +461,7 @@ moveUnitToQueueEnd unit [] = [unit]
 moveUnitToQueueEnd unit (ut:uts)
   | unit == ut = uts ++ [unit]
   | otherwise = ut : moveUnitToQueueEnd unit uts
-   
+
 changeUnitProps :: Unit -> UnitState -> Unit -> Unit
 changeUnitProps (Unit unitType unitState) u1prps uCur
   | (Unit unitType unitState) == uCur = Unit unitType u1prps
@@ -370,4 +476,5 @@ selectedStateHandler _e _st = _st
 
 timeHandler :: Float -> State -> State
 timeHandler _dt (Moving gameState unit coords animation) = moveCharacter (Moving gameState unit coords animation) coords
+timeHandler _dt (AttackMoving _gs _at coords _v _d _an _param) = moveBeforeAttack (AttackMoving _gs _at coords _v _d _an _param) 
 timeHandler _dt state = state
