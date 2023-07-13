@@ -229,40 +229,7 @@ determinePostAttackParameter _ = NoParams
 replaceSeed :: GameState -> Int -> GameState
 replaceSeed (GameState _u _p _q _s) = GameState _u _p _q
 
-determineAction :: State -> DoubleCoords -> State
-determineAction (Selected gameState unit pkm) coords =
-  case (coordsToHexHMM3 coords) of
-    Nothing -> Selected gameState unit pkm
-    Just (x, y) -> if isMovable (Selected gameState unit pkm) (x, y)
-      then moveCharacter (Selected gameState unit pkm) (x, y)
-      else case isAttackableFrom coords (x, y)  (Selected gameState unit pkm) of
-        Nothing -> Selected gameState unit pkm
-        Just (place, victim) -> performAttack (Selected gameState unit pkm) unit victim place
-determineAction state _ = state
 
-
-performAttack
-  :: State
-  -> Unit
-  -> Unit
-  -> CellCoords
-  -> State
-performAttack (Selected gameState unit pkm) damager victim place = newState
-  where
-    newState = Selected newGameState newUnit pkm
-    result = attack gameState damager victim place
-    (newSeed, AttackResult postDamager postVictim) = runJavaRandom result seed
-    GameState units _player queue seed = gameState
-    newQueue = replaceAttackUnits (moveUnitToQueueEnd unit queue)
-    newUnits = replaceAttackUnits units
-    replaceAttackUnits unitList = replaceIfAlive (replaceIfAlive unitList (victim, postVictim)) (damager, postDamager)
-    newUnit = getFirstUnit newQueue
-    (Unit _unitType unitState) = newUnit
-    newPlayer = getPlayer unitState
-    newGameState = GameState newUnits newPlayer newQueue newSeed
-
-
-performAttack s_ _ _ _ = s_
 
 
 replaceIfAlive :: [Unit] -> (Unit, Maybe Unit) -> [Unit]
