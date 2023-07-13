@@ -54,7 +54,15 @@ data CellPart = UR | UL | L | DL | DR | R
 
 
 renderFieldWithState :: [Unit] -> [(UnitType, Picture)] -> [(String, Picture)] -> Unit -> Picture
-renderFieldWithState units assets screenAssets unit = renderField units assets <> displayStats (fromMaybe blank (lookup "stats" screenAssets)) unit
+renderFieldWithState units assets screenAssets unit = renderField units assets <> 
+  translate (realToFrac (x+20)) (realToFrac (y-25)) (displayStats (fromMaybe blank (lookup "stats" screenAssets)) unit)
+  where
+    (x, y) = currentConversion (getUnitCoords unit)
+
+    --(xSt, ySt) = (xConv + xOff, yConv + yOff)
+    cellPlayerDirection = case getType (getPlayer (getUnitState unit)) of
+      LeftPlayer -> 1
+      RightPlayer -> -1
 -- RENDERERS
 -- We are rendering the whole situation right here.
 renderState :: Picture -> [(UnitType, Picture)] -> [(String, Picture)] -> State -> Picture
@@ -225,7 +233,7 @@ displayStats initBg unit = bg <> stats
     curHp = "Current health " ++ show (getHealthOfLast state)
     hp = "Health " ++ show (getHealth props)
     damage = "Damage " ++ show (head (getDamage props)) ++ 
-      "..." ++ show (last (getDamage props))
+      "-" ++ show (last (getDamage props))
     speed = "Speed " ++ show (getSpeed props)
 
     statsList = [atk, def, ammo, damage, hp, curHp, speed]
