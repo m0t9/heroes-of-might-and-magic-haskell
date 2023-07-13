@@ -1,4 +1,6 @@
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE UnicodeSyntax #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Graphics where
 import Graphics.Gloss
 import GameHandler
@@ -20,6 +22,12 @@ selectedCellColorDefault :: Color
 selectedCellColorDefault = makeColor 255 255 255 0.1
 chosenUnitCellColor :: Color
 chosenUnitCellColor = makeColor 1 0.5 1 1
+borderColor :: Color
+borderColor = makeColor 0.953 0.855 0.871 1
+stackColor :: Color
+stackColor = makeColor 0.38 0.129 0.631 1
+hpColor :: Color
+hpColor = makeColor 0.282 0.188 0.102 1
 
 currentConversion :: CellCoords -> DoubleCoords
 currentConversion hexCoords = hexToCoords offset hexCoords hexSide
@@ -122,22 +130,36 @@ drawUnitCells units = pictures (map unitCell units)
 renderUnit :: CellCoords -> Unit -> (Unit -> [(UnitType, Picture)] -> Picture) -> [(UnitType, Picture)] -> Picture
 renderUnit (x, y) unit renderer assets = 
   translate (realToFrac realX) (realToFrac realY) (scale cellPlayerDirection 1 (renderer unit assets)) -- unit itself
-   <> translate (realToFrac realXSt) (realToFrac realYSt) 
-      (color (makeColor 0.953 0.855 0.871 1) (rectangleSolid 27 12) 
-      <> color (makeColor 0.38 0.129 0.631 1) (rectangleSolid 25 10)
-      <> translate (-2.5 * int2Float (length dataToShow)) (-3.75) (color white (scale 0.07 0.07 (text dataToShow))))
+    <> translate (realToFrac realXSt) (realToFrac realYSt) (displayStackSize unit)
+    <> translate (realToFrac realXHP)  (realToFrac realYHP) (displayHP unit)
   where
-    dataToShow = show (getStackSize unitState)
     (realX, realY) = currentConversion (x, y)
+
     (realXSt, realYSt) = (xSt - (hexSide/2) * float2Double cellPlayerDirection, ySt)
+    (realXHP, realYHP) = (realXSt + 24, realYSt)
+
     (xSt, ySt) = currentConversion(x + float2Int cellPlayerDirection, y)
-    (Unit _unitType unitState) = unit
+
     cellPlayerDirection = case getType (getPlayer (getUnitState unit)) of
         LeftPlayer -> 1
         RightPlayer -> -1
 
+displayHP :: Unit -> Picture
+displayHP unit = color borderColor (rectangleSolid 22.5 12)
+  <> color hpColor (rectangleSolid 20.5 10)
+  <> translate (-2.5 * int2Float (length hpToShow)) (-3.75) (color white (scale 0.07 0.07 (text hpToShow)))
+  where
+    hpToShow = show (getHealth (getProps (getUnitState unit)))
+
+displayStackSize :: Unit -> Picture
+displayStackSize unit = color borderColor (rectangleSolid 27 12) 
+  <> color stackColor (rectangleSolid 25 10)
+  <> translate (-2.5 * int2Float (length stackToShow)) (-3.75) (color white (scale 0.07 0.07 (text stackToShow)))
+  where
+    stackToShow = show (getStackSize (getUnitState unit))
+
 getUnitPicture :: Unit -> [(UnitType, Picture)] -> Picture
-getUnitPicture (Unit unitType _unitState) assets = 
+getUnitPicture (Unit unitType _unitState) assets =
   translate (0) (double2Float hexSide/2) (fromMaybe blank (lookup unitType assets))
 
 getSelectedUnitPicture :: Unit -> [(UnitType, Picture)] -> Picture
