@@ -476,6 +476,7 @@ selectedStateHandler (EventKey (MouseButton RightButton) Down _ (x, y)) (Selecte
     cellCoords = case coordsToHex offset (float2Double x, float2Double y) hexSide of
       Just crds -> crds
       Nothing -> (-1, -1)
+selectedStateHandler (EventKey (MouseButton RightButton) Up _ _crds) (Selected gameState unit _pkm) = Selected gameState unit Nothing
 selectedStateHandler _e (Selected gameState unit pkm) = case filterEnemy player units of
   [] -> GameOver gameState player
   _ -> Selected gameState unit pkm
