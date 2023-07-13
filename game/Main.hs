@@ -57,7 +57,6 @@ main = do
 
 
 units :: [Unit]
-units :: [Unit]
 units = [
     createUnit Pikeman player1 (0, 0) 80,
     createUnit Archer player1 (0, 1) 10,
