@@ -7,7 +7,7 @@ import Utils
 import Codec.Picture ( convertRGBA8, readImage, DynamicImage )
 import Graphics.Gloss.Juicy
 import Data.Maybe
-import GHC.Float (double2Float)
+import GHC.Float
 
 -- | Colors
 leftPlayerFieldColor :: Color
@@ -121,9 +121,17 @@ drawUnitCells units = pictures (map unitCell units)
 
 renderUnit :: CellCoords -> Unit -> (Unit -> [(UnitType, Picture)] -> Picture) -> [(UnitType, Picture)] -> Picture
 renderUnit (x, y) unit renderer assets = 
-  translate (realToFrac realX) (realToFrac realY) (scale cellPlayerDirection 1 (renderer unit assets))
+  translate (realToFrac realX) (realToFrac realY) (scale cellPlayerDirection 1 (renderer unit assets)) -- unit itself
+   <> translate (realToFrac realXSt) (realToFrac realYSt) 
+      (color (makeColor 0.953 0.855 0.871 1) (rectangleSolid 27 12) 
+      <> color (makeColor 0.38 0.129 0.631 1) (rectangleSolid 25 10)
+      <> translate (-2.5 * int2Float (length dataToShow)) (-3.75) (color white (scale 0.07 0.07 (text dataToShow))))
   where
+    dataToShow = show (getStackSize unitState)
     (realX, realY) = currentConversion (x, y)
+    (realXSt, realYSt) = (xSt - (hexSide/2) * float2Double cellPlayerDirection, ySt)
+    (xSt, ySt) = currentConversion(x + float2Int cellPlayerDirection, y)
+    (Unit _unitType unitState) = unit
     cellPlayerDirection = case getType (getPlayer (getUnitState unit)) of
         LeftPlayer -> 1
         RightPlayer -> -1
