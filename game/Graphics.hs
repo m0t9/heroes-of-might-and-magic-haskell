@@ -164,7 +164,6 @@ renderUnit :: CellCoords -> Unit -> (Unit -> [(UnitType, Picture)] -> Picture) -
 renderUnit (x, y) unit renderer assets = 
   translate (realToFrac realX) (realToFrac realY) (scale cellPlayerDirection 1 (renderer unit assets)) -- unit itself
     <> translate (realToFrac realXSt) (realToFrac realYSt) (displayStackSize unit)
-    <> translate (realToFrac realXHP)  (realToFrac realYHP) (displayHP unit)
   where
     (realX, realY) = currentConversion (x, y)
 
@@ -176,13 +175,6 @@ renderUnit (x, y) unit renderer assets =
     cellPlayerDirection = case getType (getPlayer (getUnitState unit)) of
         LeftPlayer -> 1
         RightPlayer -> -1
-
-displayHP :: Unit -> Picture
-displayHP unit = color borderColor (rectangleSolid 22.5 12)
-  <> color hpColor (rectangleSolid 20.5 10)
-  <> translate (-2.5 * int2Float (length hpToShow)) (-3.75) (color white (scale 0.07 0.07 (text hpToShow)))
-  where
-    hpToShow = show (getHealth (getProps (getUnitState unit)))
 
 displayStackSize :: Unit -> Picture
 displayStackSize unit = color borderColor (rectangleSolid 27 12) 
