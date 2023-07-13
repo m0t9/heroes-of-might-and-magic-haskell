@@ -245,6 +245,6 @@ displayStats initBg unit = bg <> stats
       translate 0 ((-13) * fromIntegral ind) (getTextPic p) <>
         renderListText ps (ind + 1)
     
-    bg = translate (60) ((-36)) (color borderColor (rectangleSolid 144.1 107.1) <> (scale 0.4 0.4 initBg)) --146.6 110.6
+    bg = translate (60) ((-36)) (color borderColor (rectangleSolid 144.1 107.1) <> (scale 0.4 0.4 initBg))
     stats = renderListText statsList 0
     
