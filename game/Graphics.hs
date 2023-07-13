@@ -53,17 +53,17 @@ type Field = Picture
 data CellPart = UR | UL | L | DL | DR | R
 
 
-renderFieldWithState :: [Unit] -> [(UnitType, Picture)] -> Unit -> Picture
-renderFieldWithState units assets unit = renderField units assets <> displayStats unit
+renderFieldWithState :: [Unit] -> [(UnitType, Picture)] -> [(String, Picture)] -> Unit -> Picture
+renderFieldWithState units assets screenAssets unit = renderField units assets <> displayStats (fromMaybe blank (lookup "stats" screenAssets)) unit
 -- RENDERERS
 -- We are rendering the whole situation right here.
 renderState :: Picture -> [(UnitType, Picture)] -> [(String, Picture)] -> State -> Picture
 --renderState (NoSelected (GameState units _turn _queue)) = renderField units
-renderState background assets _gmvr (Selected (GameState units turn _queue _r) unit pkm) = case pkm of
+renderState background assets screenAssets (Selected (GameState units turn _queue _r) unit pkm) = case pkm of
   Nothing -> background <> (renderSelection (GameState units turn _queue _r) unit <> 
     selectedCellUnit unit assets <> renderField units assets)
   Just unitPKM -> background <> (renderSelection (GameState units turn _queue _r) unit <>
-    selectedCellUnit unit assets <> renderFieldWithState units assets unitPKM)
+    selectedCellUnit unit assets <> renderFieldWithState units assets screenAssets unitPKM)
 renderState background assets _gmvr (Moving state _unit _coords _animation) = 
   background <> renderField units assets
   where
@@ -237,6 +237,6 @@ displayStats initBg unit = bg <> stats
       translate 0 ((-13) * fromIntegral ind) (getTextPic p) <>
         renderListText ps (ind + 1)
     
-    bg = initBg
+    bg = scale 0.3 0.3 initBg
     stats = renderListText statsList 0
     
