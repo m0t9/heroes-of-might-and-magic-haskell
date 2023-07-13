@@ -118,7 +118,8 @@ data PostAttackParameter
 
 gameHandler :: Event -> State -> State
 --gameHandler _event (NoSelected gameState)    = noSelectedStateHandler _event (NoSelected gameState)
-gameHandler (EventKey (SpecialKey KeyEnter) Down _ _ ) _ = initialWorld
+gameHandler (EventKey (Char 'r') Down _ _ ) _ = initialWorld
+gameHandler (EventKey (Char 'R') Down _ _ ) _ = initialWorld
 gameHandler _event (Selected gameState unit pkm) = selectedStateHandler _event (Selected gameState unit pkm)
 gameHandler _event (Moving gameState unit crds animation) = (Moving gameState unit crds animation)
 gameHandler _event (GameOver _gameState _player) = gameOverHandler _event (GameOver _gameState _player)
