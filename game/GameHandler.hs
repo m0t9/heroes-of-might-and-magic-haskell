@@ -136,20 +136,7 @@ getFriendlyCoords :: Player -> [Unit] -> [CellCoords]
 getFriendlyCoords player units = getCoordsOfUnits (filterFriendly player units)
 
 
-getNeighbourCell :: CellCoords -> CellPart -> CellCoords
-getNeighbourCell (x, y) R = (x+1, y)
-getNeighbourCell (x, y) L = (x-1, y)
-getNeighbourCell (x, y) dir
-  | even y    = case dir of
-    UR -> (x+1, y+1)
-    UL -> (x, y+1)
-    DR -> (x+1, y-1)
-    DL -> (x, y-1)
-  | otherwise = case dir of
-    UR -> (x, y+1)
-    UL -> (x-1, y+1)
-    DR -> (x, y-1)
-    DL -> (x-1, y-1)
+
 
 findUnit:: CellCoords -> [Unit] -> Maybe Unit
 findUnit _ [] = Nothing

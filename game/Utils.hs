@@ -39,3 +39,21 @@ sign num
   | num > 0   = 1
   | num < 0   = -1
   | otherwise = 0
+
+getNeighbourCell :: CellCoords -> CellPart -> CellCoords
+getNeighbourCell (x, y) R = (x+1, y)
+getNeighbourCell (x, y) L = (x-1, y)
+getNeighbourCell (x, y) dir
+  | even y    = case dir of
+    UR -> (x+1, y+1)
+    UL -> (x, y+1)
+    DR -> (x+1, y-1)
+    DL -> (x, y-1)
+  | otherwise = case dir of
+    UR -> (x, y+1)
+    UL -> (x-1, y+1)
+    DR -> (x, y-1)
+    DL -> (x-1, y-1)
+    
+getNeighbourCells :: CellCoords -> [CellCoords]
+getNeighbourCells coords = zipWith (getNeighbourCell) (replicate 6 coords) [UR, UL, L, DL, DR, R]   
