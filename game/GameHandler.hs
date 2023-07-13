@@ -118,6 +118,8 @@ data PostAttackParameter
 
 gameHandler :: Event -> State -> State
 --gameHandler _event (NoSelected gameState)    = noSelectedStateHandler _event (NoSelected gameState)
+gameHandler (EventKey (Char 'r') Down _ _ ) _ = initialWorld
+gameHandler (EventKey (Char 'R') Down _ _ ) _ = initialWorld
 gameHandler _event (Selected gameState unit pkm) = selectedStateHandler _event (Selected gameState unit pkm)
 gameHandler _event (Moving gameState unit crds animation) = (Moving gameState unit crds animation)
 gameHandler _event (GameOver _gameState _player) = gameOverHandler _event (GameOver _gameState _player)
@@ -484,13 +486,16 @@ selectedStateHandler _e (Selected gameState unit pkm) = case filterEnemy player 
     (GameState units player _queue _r) = gameState
 selectedStateHandler _e st = st
 gameOverHandler :: Event -> State -> State
-gameOverHandler (EventKey (SpecialKey KeyEnter) Down _ _ ) (GameOver _gameState _player) = Selected (GameState unitsStart firstPlayer sortedUnits 0) firstUnit Nothing
+gameOverHandler (EventKey (SpecialKey KeyEnter) Down _ _ ) (GameOver _gameState _player) = initialWorld
+  
+gameOverHandler _event state = state
+
+initialWorld :: State
+initialWorld = Selected (GameState unitsStart firstPlayer sortedUnits 0) firstUnit Nothing
   where
     firstUnit = getFirstUnit sortedUnits
     firstPlayer = determineTheFirst sortedUnits
     sortedUnits = sortUnits unitsStart
-gameOverHandler _event state = state
-
 timeHandler :: Float -> State -> State
 timeHandler _dt (Moving gameState unit coords animation) = moveCharacter (Moving gameState unit coords animation) coords
 timeHandler _dt (AttackMoving _gs _at coords _v _d _an _param) = moveBeforeAttack (AttackMoving _gs _at coords _v _d _an _param)
