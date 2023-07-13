@@ -339,8 +339,8 @@ sortUnits units = sortBy cmp units
     cmp (Unit _ s1) (Unit _ s2)
       | sp1 > sp2 = LT
       | sp2 > sp1 = GT
-      | y1 < y2 = LT
-      | y2 < y1 = GT
+      | y1 > y2 = LT
+      | y2 > y1 = GT
       | otherwise
       = case tp1 of
         LeftPlayer -> LT
