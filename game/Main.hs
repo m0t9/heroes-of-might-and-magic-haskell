@@ -31,6 +31,9 @@ main = do
   getHarpy <- getImage "harpy"
   getBeholder <- getImage "beholder"
   getMinotaur <- getImage "minotaur"
+  getGameover <- getImage "gameover"
+  getLeftPlayer <- getImage "leftplayer"
+  getRightPlayer <- getImage "rightplayer"
   let assets = [
         (Archer, getArcher),
         (Pikeman, getPikeman),
@@ -43,7 +46,11 @@ main = do
         (Harpy, getHarpy),
         (Beholder, getBeholder),
         (Minotaur, getMinotaur)]
-  play window white 3 world (renderState background assets) gameHandler timeHandler
+  let gameOverScreen = [
+        ("gameover", getGameover),
+        ("leftplayer", getLeftPlayer),
+        ("rightplayer", getRightPlayer)]
+  play window white 3 world (renderState background assets gameOverScreen) gameHandler timeHandler
 
 
 units :: [Unit]
