@@ -31,10 +31,17 @@ hpColor = makeColor 0.282 0.188 0.102 1
 statsColor :: Color
 statsColor = makeColor 0.45 0.255 0.102 1
 
-currentConversion :: CellCoords -> DoubleCoords
+-- | Convert hex coords to usual
+currentConversion 
+  :: CellCoords 
+  -> DoubleCoords
 currentConversion hexCoords = hexToCoords offset hexCoords hexSide
 
-makeHexagonDotSet :: CellCoords -> Double -> [(Float, Float)]
+-- | Get coordinates to draw hexagon
+makeHexagonDotSet 
+  :: CellCoords           -- | Coordinates of cell
+  -> Double               -- | Size of hexagon side
+  -> [(Float, Float)]
 makeHexagonDotSet hexCoords side =
    [up, upRight, downRight, down, downLeft, upLeft]
      where
@@ -48,12 +55,17 @@ makeHexagonDotSet hexCoords side =
       downLeft = (realToFrac (x - sqrtSide), realToFrac (y - halfSide))
       upLeft = (realToFrac (x - sqrtSide), realToFrac (y + halfSide))
 
+-- | Types for render
 type Offset = (Double, Double)
 type Field = Picture
 data CellPart = UR | UL | L | DL | DR | R
 
-
-renderFieldWithState :: [Unit] -> [(UnitType, Picture)] -> [(String, Picture)] -> Unit -> Picture
+renderFieldWithState 
+  :: [Unit]                     -- | List of units to draw
+  -> [(UnitType, Picture)]      -- | Units' sprites
+  -> [(String, Picture)]        -- | Game screens
+  -> Unit                       -- | Selected unit
+  -> Picture
 renderFieldWithState units assets screenAssets unit = renderField units assets <> 
   translate (realToFrac (x+offSetX)) (realToFrac (y-25)) (displayStats (fromMaybe blank (lookup "stats" screenAssets)) unit assets)
   where
@@ -80,7 +92,8 @@ renderState background assets _gmvr (Moving state _unit _coords _animation) =
   background <> renderField units assets
   where
     (GameState units _turn _queue _r) = state
-renderState background assets _gmvr (AttackMoving state _damager _coords _victim _d _animation _param) = 
+renderState background assets _gmvr 
+  (AttackMoving state _damager _coords _victim _d _animation _param) = 
   background <> renderField units assets
   where
     (GameState units _turn _queue _r) = state    
@@ -101,33 +114,51 @@ renderState background assets gameOverAssets (GameOver state winner) =
   where
     (GameState units _turn _queue _r) = state
 
-winnerTable :: Player -> [(String, Picture)] -> Picture
+-- | Render end game screen
+winnerTable 
+  :: Player                 -- | Winner
+  -> [(String, Picture)]    -- | Sprites
+  -> Picture
 winnerTable player gameOverAssets = translate 0 0 (fromMaybe blank (lookup "gameover" gameOverAssets))
   <> translate (-50) 25 case player of
       Player LeftPlayer -> fromMaybe blank (lookup "leftplayer" gameOverAssets)
       Player RightPlayer -> fromMaybe blank (lookup "rightplayer" gameOverAssets)
-  -- where
-  --   winner = case player of
-  --     Player LeftPlayer -> "LeftPlayer"
-  --     Player RightPlayer -> "RightPlayer"
 
-renderSelection :: GameState -> Unit -> Picture
+-- | Render all selected (available to walk) cells
+renderSelection 
+  :: GameState  -- | Current game state
+  -> Unit       -- | Unit to draw cells for
+  -> Picture
 renderSelection gameState unit = pictures (map selectedCell (getCellsToMove unit gameState))
 
-selectedCell :: CellCoords -> Picture
+-- | Get picture of selected cell (available for move)
+selectedCell 
+  :: CellCoords       -- | Coords of selected cell
+  -> Picture
 selectedCell coords = color selectedCellColor (drawCell coords polygon)
 
-selectedCellUnit :: Unit -> [(UnitType, Picture)] -> Picture
+-- | Draw unit at selected cell
+selectedCellUnit 
+  :: Unit                   -- | Unit to draw
+  -> [(UnitType, Picture)]  -- | Sprites for units
+  -> Picture
 selectedCellUnit unit assets = color chosenUnitCellColor (drawCell coords polygon) <> 
   renderUnit coords unit getSelectedUnitPicture assets <> 
   renderUnit coords unit getUnitPicture assets
   where
     coords = getUnitCoords unit
 
-renderField :: [Unit] -> [(UnitType, Picture)] -> Picture
+-- | Draw field, units on it, highlighted cells
+renderField 
+  :: [Unit]                 -- | List of units
+  -> [(UnitType, Picture)]  -- | List of sprites for units
+  -> Picture
 renderField units assets = drawField (0, 0) <> drawUnitCells units <> drawUnits units assets
 
-drawField :: CellCoords -> Picture
+-- | Recursively draw entire game field
+drawField 
+  :: CellCoords   -- | Current coordinates
+  -> Picture
 drawField (x, y)
   | (x == xF - 1 && y == yF - 1) = 
       color selectedCellColorDefault (drawCell (x, y) polygon) 
@@ -141,16 +172,31 @@ drawField (x, y)
   where
     (xF, yF) = fieldSize
 
-drawCell :: CellCoords -> (Path -> Picture) -> Field
+-- | Draw cell on field
+drawCell 
+  :: CellCoords         -- | Coords to draw cell at
+  -> (Path -> Picture)  -- | Drawer
+  -> Field
 drawCell cellCoords drawFunc = drawFunc (makeHexagonDotSet cellCoords hexSide)
 
-drawUnits :: [Unit] -> [(UnitType, Picture)] -> Picture
+-- | Draw multiple units
+drawUnits 
+  :: [Unit]                     -- | Units to draw  
+  -> [(UnitType, Picture)]      -- | Sprites for units
+  -> Picture
 drawUnits units assets = pictures (map (drawUnit assets) units)
 
-drawUnit :: [(UnitType, Picture)] -> Unit -> Picture
+-- | Convenient function to draw one unit
+drawUnit 
+  :: [(UnitType, Picture)]      -- | List of sprites for units
+  -> Unit                       -- | Unit to draw
+  -> Picture
 drawUnit assets unit = renderUnit (getUnitCoords unit) unit getUnitPicture assets
 
-drawUnitCells :: [Unit] -> Picture
+-- | Higlight cells where units stay
+drawUnitCells 
+  :: [Unit]    -- | List of units to draw cells for
+  -> Picture
 drawUnitCells units = pictures (map unitCell units)
   where
     unitCell unit = color cellPlayerColor (drawCell (x, y) polygon)
@@ -160,10 +206,17 @@ drawUnitCells units = pictures (map unitCell units)
           RightPlayer -> rightPlayerFieldColor
         (x, y) = getCoords $ getUnitState unit
 
-renderUnit :: CellCoords -> Unit -> (Unit -> [(UnitType, Picture)] -> Picture) -> [(UnitType, Picture)] -> Picture
+-- | Render unit on field
+renderUnit 
+  :: CellCoords                                       -- | Coords to render unit at
+  -> Unit                                             -- | Unit to render
+  -> (Unit -> [(UnitType, Picture)] -> Picture)       -- | Function to find unit picture
+  -> [(UnitType, Picture)]                            -- | List of sprites for units
+  -> Picture                                
 renderUnit (x, y) unit renderer assets = 
-  translate (realToFrac realX) (realToFrac realY + 10) (scale cellPlayerDirection 1 (renderer unit assets)) -- unit itself
-    <> translate (realToFrac realXSt) (realToFrac realYSt) (displayStackSize unit)
+  translate (realToFrac realX) (realToFrac realY + 10) (scale cellPlayerDirection 1 
+    (renderer unit assets))
+      <> translate (realToFrac realXSt) (realToFrac realYSt) (displayStackSize unit)
   where
     (realX, realY) = currentConversion (x, y)
 
@@ -176,27 +229,45 @@ renderUnit (x, y) unit renderer assets =
         LeftPlayer -> 1
         RightPlayer -> -1
 
-displayStackSize :: Unit -> Picture
+-- | Display amount of units on cell
+displayStackSize 
+  :: Unit       -- | Unit to draw its amount
+  -> Picture
 displayStackSize unit = color borderColor (rectangleSolid 27 12) 
   <> color stackColor (rectangleSolid 25 10)
-  <> translate (-2.5 * int2Float (length stackToShow)) (-3.75) (color white (scale 0.07 0.07 (text stackToShow)))
+  <> translate (-2.5 * int2Float (length stackToShow)) 
+    (-3.75) (color white (scale 0.07 0.07 (text stackToShow)))
   where
     stackToShow = show (getStackSize (getUnitState unit))
 
-getUnitPicture :: Unit -> [(UnitType, Picture)] -> Picture
+-- | Get picture for given unit
+getUnitPicture 
+  :: Unit                     -- Unit to find picture for             
+  -> [(UnitType, Picture)]    -- List of sprites for units
+  -> Picture
 getUnitPicture (Unit unitType _unitState) assets =
   translate (0) (double2Float hexSide/2) (fromMaybe blank (lookup unitType assets))
 
-getSelectedUnitPicture :: Unit -> [(UnitType, Picture)] -> Picture
+-- | Get picture for unit's selected state
+getSelectedUnitPicture 
+  :: Unit                       -- | Unit to find sprite for
+  -> [(UnitType, Picture)]      -- | List of sprites for units
+  -> Picture                  
 getSelectedUnitPicture (Unit unitType _unitState) assets = 
   translate (0) (double2Float hexSide/2) (fromMaybe blank (lookup unitType assets))
 
-getImagePath :: String -> IO [Char]
+-- | Get path to sprite with given name
+getImagePath 
+  :: String         -- | Name of sprite
+  -> IO [Char]      -- | Path to sprite
 getImagePath str = do
   let me = "sprites/" ++ str ++ ".png"
   return me
 
-loadImage :: String -> IO (Maybe DynamicImage)
+-- | Extract sprite for given sprite name
+loadImage
+  :: String                     -- | Sprite name
+  -> IO (Maybe DynamicImage)
 loadImage name = do
   path <- getImagePath name
   img <- readImage path
@@ -204,19 +275,25 @@ loadImage name = do
     Left _ -> Nothing
     Right img -> Just img
 
-convertImage :: DynamicImage -> Picture
+-- | Convert dynamic image to drawable one
+convertImage 
+  :: DynamicImage 
+  -> Picture
 convertImage = fromImageRGBA8 . convertRGBA8
 
-getImage :: String -> IO Picture
+-- | Get sprite that corresponds to given name
+getImage 
+  :: String       -- | Sprite name
+  -> IO Picture
 getImage name = do
     processImage <$> loadImage name
   where
     processImage = maybe (color yellow (circleSolid 10)) convertImage
 
--- Draw unit stats
+-- | Draw unit stats
 displayStats
-  :: Picture    -- Stats backgrou
-  -> Unit       -- Unit to draw his stats
+  :: Picture    -- | Stats backgrou
+  -> Unit       -- | Unit to draw his stats
   -> [(UnitType, Picture)]
   -> Picture
 displayStats initBg unit assets = bg <> stats <> renderSprite
@@ -242,8 +319,10 @@ displayStats initBg unit assets = bg <> stats <> renderSprite
       translate 25 ((-13) * fromIntegral ind) (getTextPic p) <>
         renderListText ps (ind + 1)
     
-    renderSprite = translate 185 (-36) (scale 0.75 0.75 (fromMaybe blank ((lookup (getUnitType unit) assets))))
+    renderSprite = translate 185 (-36) (scale 0.75 0.75 
+      (fromMaybe blank ((lookup (getUnitType unit) assets))))
     
-    bg = translate (115) ((-36)) (color borderColor (rectangleSolid 232.5 108.1) <> (scale 0.65 0.4 initBg))
+    bg = translate (115) ((-36)) (color borderColor 
+      (rectangleSolid 232.5 108.1) <> (scale 0.65 0.4 initBg))
     stats = renderListText statsList 0
     

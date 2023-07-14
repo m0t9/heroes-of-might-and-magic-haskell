@@ -4,9 +4,11 @@ import Graphics.Gloss
 import Game
 import GameHandler
 
+-- | Main window
 window :: Display
 window = InWindow "/DaniilNikulin" (1024, 712) (100, 100)
 
+-- | Initial game state
 world :: State
 world = Selected (GameState units firstPlayer sortedUnits 0) firstUnit Nothing
   where
@@ -17,8 +19,8 @@ world = Selected (GameState units firstPlayer sortedUnits 0) firstUnit Nothing
 
 main :: IO ()
 main = do
+  -- | Load sprites
   background <- getImage "background"
-  statsBackground <- getImage "stats"
   getArcher <- getImage "archer"
   getPikeman <- getImage "pikeman"
   getSwordsman <- getImage "swordsman"
@@ -56,6 +58,7 @@ main = do
   play window white 10 world (renderState background assets assetsScreen) gameHandler timeHandler
 
 
+-- | List of start units
 units :: [Unit]
 units = [
     createUnit Pikeman player1 (0, 0) 80,
