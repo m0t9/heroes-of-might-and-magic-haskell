@@ -9,8 +9,31 @@ import Graph
 import Data.List (delete)
 import Data.Maybe (isNothing, isJust, catMaybes, fromJust)
 
+type Animation = Maybe [Coords]
 
-hexToCoords:: Offset -> CellCoords -> Double -> DoubleCoords
+data State
+  = Selected GameState Unit (Maybe Unit)
+  | Moving GameState Unit Coords Animation
+  | AttackMoving GameState Unit Coords Unit CellPart Animation PostAttackParameter
+  | Attacking GameState Unit Coords Unit CellPart PostAttackParameter
+  | CounterAttacking GameState Unit (Maybe Unit) CellPart PostAttackParameter
+  | PostAttacking GameState (Maybe Unit) PostAttackParameter
+  | GameOver GameState Player
+
+data PostAttackParameter
+  = HarpyReturnPoint Coords
+  | NoParams
+
+data Action = Attack AttackType | Move CellCoords | Skip | NoAction
+data HexClick = Hex CellCoords CellPart
+data AttackType = RangeAttack Unit CellCoords | MeleeAttack Unit CellCoords CellPart
+
+-- | Convert hexagonal to double coordinates using global constants
+hexToCoords 
+  :: Offset -- | Offset of the field
+  -> CellCoords -- | Hexagonal coordinates to convert
+  -> Double -- | Size of the hexagon side
+  -> DoubleCoords -- | Double coordinates of hexagon
 hexToCoords (xOffset, yOffset) (xHex, yHex) side =
   (xOffset + xShift, yOffset + yShift)
   where
@@ -21,23 +44,36 @@ hexToCoords (xOffset, yOffset) (xHex, yHex) side =
       | even yHex = (sqrt 3) * side * (1 + x)
       | otherwise = (sqrt 3) * side * (1/2 + x)
 
-hexToCoordsHMM3 :: CellCoords -> DoubleCoords
+-- | Convert hexagonal coordinates to double coordinates
+hexToCoordsHMM3 
+  :: CellCoords -- | Hexagonal coordinates to convert
+  -> DoubleCoords -- | Double coordinates of hexagon
 hexToCoordsHMM3 coords = hexToCoords offset coords hexSide
 
-isInHex :: DoubleCoords -> DoubleCoords -> Double -> Bool
+-- | Check if the target double coordinates are in some hexagon
+isInHex 
+  :: DoubleCoords -- | Target double coordinates to check
+  -> DoubleCoords -- | Center of the target hexagon
+  -> Double -- | Size of the hexagon side
+  -> Bool -- | True or False
 isInHex (x, y) (xHexCenter, yHexCenter) side
   | (((x-xHexCenter)*(x-xHexCenter)) + ((y-yHexCenter) * (y-yHexCenter))) > (side*side) = False
   | otherwise                                                                           = True
 
-coordsToHexHMM3 :: DoubleCoords -> Maybe CellCoords
+-- | Convert double to the hexagonal coordinates as in HMM3
+coordsToHexHMM3 
+  :: DoubleCoords -- | Double coordinates to convert
+  -> Maybe CellCoords -- | Corresponding hexagonal coordinates in HMM3
 coordsToHexHMM3 coords
   = coordsToHexWithDomain offset coords hexSide (15, 11)
+
+-- | Convert double to the hexagonal coordinates with the domain
 coordsToHexWithDomain
-  :: Offset
-  -> DoubleCoords
-  -> Double
-  -> FieldSize
-  -> Maybe CellCoords
+  :: Offset -- | Offset of the field
+  -> DoubleCoords -- | Double coordinates to convert
+  -> Double -- | Size of the hexagon side
+  -> FieldSize -- | Size of the field
+  -> Maybe CellCoords -- | Corresponding hexagonal coordinates
 coordsToHexWithDomain offsetSize coords side (xMaxHex, yMaxHex)
   = case coordsToHex offsetSize coords side of
       Nothing -> Nothing
@@ -48,12 +84,12 @@ coordsToHexWithDomain offsetSize coords side (xMaxHex, yMaxHex)
              || (x < 0) || (y < 0) = Nothing
             | otherwise            = Just (x, y)
 
-
+-- | Convert double coordinates to the hexagonal
 coordsToHex
-  :: Offset
-  -> DoubleCoords
-  -> Double
-  -> Maybe CellCoords
+  :: Offset -- | Offset of the field
+  -> DoubleCoords -- | Double coordinates to convert
+  -> Double -- | Size of the hexagon side
+  -> Maybe CellCoords -- | Corresponding hexagonal coordinates
 coordsToHex (xOffset, yOffset) (x, y) side
   | (xCoord < xOffset) || (yCoord < yOffset) = Nothing
   | otherwise                  = result
@@ -76,8 +112,11 @@ coordsToHex (xOffset, yOffset) (x, y) side
       | isDotInHexagon (x2, y2) = Just (x2, y2)
       | otherwise               = Nothing
 
-
-isVerticalPart :: DoubleCoords -> DoubleCoords -> Bool
+-- | Determine if the double coordinates are vertical part
+isVerticalPart 
+  :: DoubleCoords -- | Double coordinates of the hexagon center
+  -> DoubleCoords -- | Target double coordinates
+  -> Bool -- | True or False
 isVerticalPart (xCenter, yCenter) (x, y)
   | cot > sqrt 3 = False
   | otherwise    = True
@@ -86,9 +125,17 @@ isVerticalPart (xCenter, yCenter) (x, y)
     leg1 = abs (x - xCenter)
     leg2 = abs (y - yCenter)
 
-determineCellPartHex :: DoubleCoords -> CellCoords -> CellPart
+-- | Determine which part of hexagon the double coordinates belong to
+determineCellPartHex 
+  :: DoubleCoords -- | Target double coordinates
+  -> CellCoords -- | Target hexagon coordinates
+  -> CellPart -- | The corresponding part of hexagon
 determineCellPartHex coords hexCoords = determineCellPart coords (hexToCoordsHMM3 hexCoords)
-determineCellPart :: DoubleCoords -> DoubleCoords -> CellPart
+-- | Determine the part of the cell
+determineCellPart 
+  :: DoubleCoords -- | Target double coordinates
+  -> DoubleCoords -- | Double coordinates of the hexagon center
+  -> CellPart -- | The corresponding part of hexagon
 determineCellPart (x, y) (xCenter, yCenter)
   | (x > xCenter) && (y > yCenter) && verticalPart            = UR
   | (x < xCenter) && (y > yCenter) && verticalPart            = UL
@@ -100,23 +147,11 @@ determineCellPart (x, y) (xCenter, yCenter)
     where
         verticalPart = isVerticalPart (x, y) (xCenter, yCenter)
 
-type Animation = Maybe [Coords]
-
-data State
-  = Selected GameState Unit (Maybe Unit)
-  | Moving GameState Unit Coords Animation
-  | AttackMoving GameState Unit Coords Unit CellPart Animation PostAttackParameter
-  | Attacking GameState Unit Coords Unit CellPart PostAttackParameter
-  | CounterAttacking GameState Unit (Maybe Unit) CellPart PostAttackParameter
-  | PostAttacking GameState (Maybe Unit) PostAttackParameter
-  | GameOver GameState Player
-
-data PostAttackParameter
-  = HarpyReturnPoint Coords
-  | NoParams
-
-
-gameHandler :: Event -> State -> State
+-- | Event handler of the world
+gameHandler 
+  :: Event -- | Incoming event
+  -> State -- | Current state of the world
+  -> State -- | Updated state of the world due to the event
 --gameHandler _event (NoSelected gameState)    = noSelectedStateHandler _event (NoSelected gameState)
 gameHandler (EventKey (Char 'r') Down _ _ ) _ = initialWorld
 gameHandler (EventKey (Char 'R') Down _ _ ) _ = initialWorld
@@ -125,55 +160,78 @@ gameHandler _event (Moving gameState unit crds animation) = (Moving gameState un
 gameHandler _event (GameOver _gameState _player) = gameOverHandler _event (GameOver _gameState _player)
 gameHandler _event _s = _s
 
-
-getUnitCoords::Unit -> CellCoords
+-- | Get the hexagonal coordinates of the unit
+getUnitCoords
+  :: Unit -- | Target unit
+  -> CellCoords -- | Corresponding hexagonal coordinates
 getUnitCoords (Unit _ (UnitState _ _ coords _ _ _)) = coords
 
-
-getCoordsOfUnits:: [Unit] -> [CellCoords]
+-- | Get the hexagonal coordinates of all units in the list
+getCoordsOfUnits
+  :: [Unit] -- | Target list of the units
+  -> [CellCoords] -- | List of the corresponding hexagonal coordinates
 getCoordsOfUnits = map getUnitCoords
 
-
-getFriendlyCoords :: Player -> [Unit] -> [CellCoords]
+-- | Get the hexagonal coordinates of the friendly units
+getFriendlyCoords 
+  :: Player -- | Target player
+  -> [Unit] -- | List of all units
+  -> [CellCoords] -- | List of the corresponding hexagonal coordinates 
 getFriendlyCoords player units = getCoordsOfUnits (filterFriendly player units)
 
-
-
-
-findUnit:: CellCoords -> [Unit] -> Maybe Unit
+-- | Find the unit by the hexagonal coordinates
+findUnit
+  :: CellCoords -- | Target hexagonal coordinates
+  -> [Unit] -- | List of all units
+  -> Maybe Unit -- | Found unit or Nothing
 findUnit _ [] = Nothing
 findUnit coords (unit:units)
   | coords == (getUnitCoords unit) = Just unit
   | otherwise                      = findUnit coords units
 
-
-selectFriendlyUnit :: GameState -> CellCoords -> Maybe Unit
+-- | Find the friendly unit at specified coordinates
+selectFriendlyUnit 
+  :: GameState -- | Current game state
+  -> CellCoords -- | Target hexagonal coordinates
+  -> Maybe Unit -- | Found friendly unit or Nothing
 selectFriendlyUnit gameState coords = findUnit coords friendlyUnits
   where
     friendlyUnits = filterFriendly (turn gameState) (getUnits gameState)
 
-doesExistInList :: CellCoords -> [CellCoords] -> Bool
+-- | Check if the coordinates exist in the list of hexagonal coordinates
+doesExistInList 
+  :: CellCoords -- | Target hexagonal coordinates
+  -> [CellCoords] -- | List of the hexagonal coordinates
+  -> Bool -- | True or False
 doesExistInList _ [] = False
 doesExistInList req (crd:crds)
   | req == crd = True
   | otherwise = doesExistInList req crds
 
-isMovable :: State -> CellCoords -> Bool
+-- | Check if the movement to the specified hexagonal coordinates is possible
+isMovable 
+  :: State -- | Current world state
+  -> CellCoords -- | Target hexagonal coordinates
+  -> Bool -- | True or False
 isMovable (Selected gameState unit _pkm) coords = doesExistInList coords (getCellsToMove unit gameState)
 isMovable _s _c = False
 
-data Action = Attack AttackType | Move CellCoords | Skip | NoAction
-data HexClick = Hex CellCoords CellPart
-data AttackType = RangeAttack Unit CellCoords | MeleeAttack Unit CellCoords CellPart
-
-clickToAction :: State -> DoubleCoords -> Action
+-- | Convert the click to the corresponding action
+clickToAction 
+  :: State -- | Current world state
+  -> DoubleCoords -- | Target double coordinates
+  -> Action -- | Corresponding action
 clickToAction state@(Selected gameState unit _pkm) coords = case coordsToHexHMM3 coords of
   Nothing -> NoAction
   Just hexCoords -> hexToAction state (Hex hexCoords (determineCellPartHex coords hexCoords))
 
 clickToAction _s _ = NoAction
 
-hexToAction :: State -> HexClick -> Action
+-- | Convert click to the hexagon to the corresponding action
+hexToAction 
+  :: State -- | Current world state
+  -> HexClick -- | Target hexagonal coordinates
+  -> Action -- | Corresponding action
 hexToAction state@(Selected gameState unit _pkm) (Hex coords part)
   | isMovable state coords = Move coords
   | isJust victim = isAttackable state justVictim part
@@ -183,7 +241,12 @@ hexToAction state@(Selected gameState unit _pkm) (Hex coords part)
     Just justVictim = victim
 hexToAction _ _ = NoAction
 
-isAttackable :: State -> Unit -> CellPart -> Action
+-- | Check if the cell part with the unit may be attacked
+isAttackable 
+  :: State -- | Current world state
+  -> Unit -- | Victim unit
+  -> CellPart -- | Target cell part to check
+  -> Action -- | Corresponding action
 isAttackable state@(Selected gameState damager _pkm) victim part
   | (getCurrentAmmo (getUnitState damager) > 0) && not (isEnemyNear gameState damager) = Attack (RangeAttack victim damagerCell)
   | isMovable state attackCell || isDamager = Attack (MeleeAttack victim attackCell attackDirection)
@@ -196,7 +259,10 @@ isAttackable state@(Selected gameState damager _pkm) victim part
     attackDirection = invertDirection part
 isAttackable _ _ _ = NoAction
 
-invertDirection :: CellPart -> CellPart
+-- | Get the opposite direction
+invertDirection 
+  :: CellPart -- | Target direction
+  -> CellPart -- | The opposite direction to the target one
 invertDirection UR =  DL
 invertDirection UL =  DR
 invertDirection DR =  UL
@@ -204,7 +270,11 @@ invertDirection DL =  UR
 invertDirection R =  L
 invertDirection L =  R
 
-determineAction' :: State -> DoubleCoords -> State
+-- | Determine and perform the action according to the click
+determineAction' 
+  :: State -- | Current world state
+  -> DoubleCoords -- | Target double coordinates
+  -> State -- | Updated world state according to the click
 determineAction' state@(Selected gameState unit _pkm) coords = case clickToAction state coords of
   NoAction
    -> state
@@ -223,28 +293,50 @@ determineAction' state@(Selected gameState unit _pkm) coords = case clickToActio
       param = determinePostAttackParameter unit
 determineAction' _s _ = _s
 
-determinePostAttackParameter :: Unit -> PostAttackParameter
+-- | Determine the parameter that will be used during Post-Attack Stage
+determinePostAttackParameter 
+  :: Unit -- | Target unit
+  -> PostAttackParameter -- | Corresponding Post-Attack Stage
 determinePostAttackParameter (Unit Harpy state) = HarpyReturnPoint (getCoords state)
 determinePostAttackParameter _ = NoParams
-replaceSeed :: GameState -> Int -> GameState
+
+-- | Replace the seed in the game state
+replaceSeed 
+  :: GameState -- | Current game state
+  -> Int -- | New seed
+  -> GameState -- | Updated game state with the new seed
 replaceSeed (GameState _u _p _q _s) = GameState _u _p _q
 
-
-
-
-replaceIfAlive :: [Unit] -> (Unit, Maybe Unit) -> [Unit]
+-- | Replace the unit if replacement is alive
+replaceIfAlive 
+  :: [Unit] -- | Current list of units
+  -> (Unit, Maybe Unit) -- | Tuple of old unit and replacement unit
+  -> [Unit] -- | Updated list of units
 replaceIfAlive units (unit, postUnit) = case postUnit of
   Nothing -> delete unit units
   Just newUnit -> replace unit newUnit units
 
-isInteractable :: GameState -> Unit -> CellCoords -> Maybe Unit
+-- | Check if the specified cell is interactable
+isInteractable 
+  :: GameState -- | Current game state
+  -> Unit -- | Target unit
+  -> CellCoords -- | Target hexagonal coordinates
+  -> Maybe Unit -- | The unit to interact with
 isInteractable state unit coords = findUnit coords (getInteractableEntities state unit)
 
-isEnemy :: Unit -> Unit -> Bool
+-- | Check if specified units are enemies to each other
+isEnemy 
+  :: Unit -- | First target unit
+  -> Unit -- | Second target unit
+  -> Bool -- | True or False
 isEnemy (Unit _ state1) (Unit _ state2) = getPlayer state1 == getPlayer state2
 
-
-isAttackableFrom :: DoubleCoords -> CellCoords -> State -> Maybe (CellCoords, Unit)
+-- | Check if the hexagon is attackable from the initial coordinates
+isAttackableFrom 
+  :: DoubleCoords -- | Target double coordinates
+  -> CellCoords -- | Initial hexagon coordinates
+  -> State -- | Current world state
+  -> Maybe (CellCoords, Unit) -- | The tuple of coordinates and unit or Nothing
 isAttackableFrom coords cellCoords state@(Selected gameState damager _pkm) = case isInteractable gameState damager cellCoords of
   Nothing -> Nothing
   Just victim -> if isMovable'
@@ -257,28 +349,49 @@ isAttackableFrom coords cellCoords state@(Selected gameState damager _pkm) = cas
     hexCenter = hexToCoordsHMM3 cellCoords
 isAttackableFrom _ _ _ = Nothing
 
-getFirstUnit :: [Unit] -> Unit
+-- | Get the first unit in the list of units
+getFirstUnit 
+  :: [Unit] -- | List of the units
+  -> Unit -- | First unit in the list
 getFirstUnit (y:ys) = y
 
-updateFirstUnit :: [Unit] -> (UnitState -> field -> UnitState) -> field -> [Unit]
+-- | Update the first unit in the list by specified function
+updateFirstUnit 
+  :: [Unit] -- | List of units
+  -> (UnitState -> field -> UnitState) -- | Function of change
+  -> field -- | The field for the function of change
+  -> [Unit] -- | Updated list of units
 updateFirstUnit (unit:units) changeFunction field = changeUnitState unit changeFunction field : units
 updateFirstUnit [] _ _ = []
 
-updateLastUnit :: [Unit] -> (UnitState -> field -> UnitState) -> field -> [Unit]
+-- | Update the last unit in the list by specified function
+updateLastUnit 
+  :: [Unit] -- | List of units
+  -> (UnitState -> field -> UnitState) -- | Function of change
+  -> field -- | The field for the function of change
+  -> [Unit] -- | Updated list of units
 updateLastUnit [] _ _ = []
 updateLastUnit [unit] changeFunction field = [changeUnitState unit changeFunction field]
 updateLastUnit (unit:units) changeFunction field = unit : updateLastUnit units changeFunction field
 
-determineTheFirst :: [Unit] -> Player
+-- | Determine the first player in the units queue
+determineTheFirst 
+  :: [Unit] -- | Queue of the units
+  -> Player -- | The first player in the queue 
 determineTheFirst [] = Player RightPlayer
 determineTheFirst (unit:units) = getPlayer
   where
     (Unit _unitType (UnitState _ getPlayer _ _ _ _ )) = unit
 
-graph :: Graph
+-- | Generate the graph to navigate in the field
+graph 
+  :: Graph -- | Generated graph
 graph = generateGraph 15 11
 
-skipTurn :: State -> State
+-- | Skip the current turn
+skipTurn 
+  :: State -- | Current world state
+  -> State -- | Updated world state with the skipped turn
 skipTurn (Selected gameState unit pkm) = Selected updatedGameState updatedUnit pkm
   where
     (GameState _units _ queue r_) = gameState
@@ -289,11 +402,14 @@ skipTurn (Selected gameState unit pkm) = Selected updatedGameState updatedUnit p
     updatedGameState = GameState _units updatedPlayer updatedQueue r_
 skipTurn _s = _s
 
-moveCharacter :: State -> CellCoords -> State
+-- | Move the unit from the world state to the specified coordinates
+moveCharacter 
+  :: State -- | Current world state with the unit
+  -> CellCoords -- | Target coordinates
+  -> State -- | Updated world state with the moved unit
 moveCharacter (Selected gameState unit _pkm) crds = Moving gameState unit crds newAnimation
   where
     newAnimation = getAnimationPath gameState unit crds
-
 
 moveCharacter (Moving (GameState units (Player turn) queue _r) unit _crdsState animation) crds
   | (unitCoords == crds) = Selected (GameState units finalPlayer finalQueue _r) finalUnit Nothing
@@ -311,7 +427,10 @@ moveCharacter (Moving (GameState units (Player turn) queue _r) unit _crdsState a
     updatedUnits = replace unit updatedUnit units
 moveCharacter _s _ = _s
 
-moveBeforeAttack :: State -> State
+-- | Perform the move before attack
+moveBeforeAttack 
+  :: State -- | Current world state
+  -> State -- | Updated world state
 moveBeforeAttack (AttackMoving gameState unit coords _v _d animation _param)
   | getUnitCoords unit == coords = attackPhase (Attacking gameState unit coords _v _d _param)
   | otherwise                    = AttackMoving newGameState updatedUnit coords _v _d updatedAnimation _param
@@ -325,7 +444,10 @@ moveBeforeAttack (AttackMoving gameState unit coords _v _d animation _param)
 
 moveBeforeAttack s_ = s_
 
-attackPhase :: State -> State
+-- | Perform the Attack Phase
+attackPhase 
+  :: State -- | Current world state
+  -> State -- | Updated world state
 attackPhase (Attacking gameState damager coords victim _d param) = case (postVictim, param) of
  -- Nothing -> PostAttacking newGameState (Just damager) _param
   (Nothing, HarpyReturnPoint returnCoords) -> moveCharacter movingBack returnCoords
@@ -350,7 +472,10 @@ attackPhase (Attacking gameState damager coords victim _d param) = case (postVic
 
 attackPhase _s = _s
 
-counterAttackPhase :: State -> State
+-- | Perform the Counter-Attack Phase
+counterAttackPhase 
+  :: State -- | Current world state
+  -> State -- | Updated world state
 -- counterAttackPhase (CounterAttacking gameState damager postDamager _d _param) = postAttackPhase (PostAttacking newGameState postDamager _param)
 counterAttackPhase (CounterAttacking gameState damager postDamager _d param) = case (postDamager, param) of
   (Nothing, _) -> selected
@@ -400,40 +525,55 @@ postAttackPhase (PostAttacking gameState postUnit param) = case param of
 
 postAttackPhase _s = _s
 -}
-getAnimationPath :: GameState -> Unit -> Coords -> Maybe [Coords]
+
+-- | Get the unit animation path for the target coordinates
+getAnimationPath 
+  :: GameState -- | Current game state
+  -> Unit -- | Target unit
+  -> Coords -- | Target coordinates
+  -> Maybe [Coords] -- | The animation path or Nothing
 getAnimationPath _state (Unit Harpy props) coords = findPath graph (getUnitCoords (Unit Harpy props)) coords (const False)
 getAnimationPath state unit coords = findPath graph (getUnitCoords unit) coords (isUnitObstacle state)
 
-getFrame :: Animation -> (Coords, Animation)
+-- Extract the next frame of the animation
+getFrame 
+  :: Animation -- | Target animation
+  -> (Coords, Animation) -- | The tuple of frame and updated animation
 getFrame frames = case frames of
   Nothing -> ((0, 0), Nothing)
   Just (fr:frms) -> (fr, Just frms)
   Just [] -> ((0, 0), Nothing)
 
---getTest :: [Int] -> (Int, [Int])
---getTest (x:xs) = (x, xs)
-
-invertPlayer :: Player -> Player
+-- | Get the inverted player
+invertPlayer 
+  :: Player -- | Target player
+  -> Player -- | The inverted player
 invertPlayer (Player LeftPlayer) = Player RightPlayer
 invertPlayer (Player RightPlayer) = Player LeftPlayer
 
-moveUnitToQueueStart :: Unit -> [Unit] -> [Unit]
+-- | Move the unit to the queue start
+moveUnitToQueueStart 
+  :: Unit -- | Target unit
+  -> [Unit] -- | The current queue of units
+  -> [Unit] -- | The updated queue of units
 moveUnitToQueueStart _ [] = []
 moveUnitToQueueStart unit units = unit : delete unit units
 
-moveUnitToQueueEnd :: Unit -> [Unit] -> [Unit]
+-- | Move the unit to the queue end
+moveUnitToQueueEnd 
+  :: Unit -- | Target unit
+  -> [Unit] -- | The current queue of units
+  -> [Unit] -- | The updated queue of units
 moveUnitToQueueEnd unit [] = [unit]
 moveUnitToQueueEnd unit (ut:uts)
   | unit == ut = uts ++ [unit]
   | otherwise = ut : moveUnitToQueueEnd unit uts
 
-changeUnitProps :: Unit -> UnitState -> Unit -> Unit
-changeUnitProps (Unit unitType unitState) u1prps uCur
-  | (Unit unitType unitState) == uCur = Unit unitType u1prps
-  | otherwise = uCur
-
-
-selectedStateHandler :: Event -> State -> State
+-- | The event handle for the Selected world state
+selectedStateHandler 
+  :: Event -- | Incoming event 
+  -> State -- | The current world state
+  -> State -- | The updated world state
 selectedStateHandler (EventKey (SpecialKey KeyEsc) Down _ _) (Selected gameState unit pkm) = Selected gameState unit pkm
 selectedStateHandler (EventKey (SpecialKey KeySpace) Down _ _) (Selected gameState unit pkm) = skipTurn (Selected gameState unit pkm)
 selectedStateHandler (EventKey (MouseButton LeftButton) Down _ (x, y)) state = determineAction' state (float2Double x, float2Double y)
@@ -452,28 +592,45 @@ selectedStateHandler _e (Selected gameState unit pkm) = case filterEnemy player 
   where
     (GameState units player _queue _r) = gameState
 selectedStateHandler _e st = st
-gameOverHandler :: Event -> State -> State
+
+-- | Handle the events in the Game Over screen
+gameOverHandler 
+  :: Event -- | Incoming event
+  -> State -- | Current world state
+  -> State -- | Updated world state
 gameOverHandler (EventKey (SpecialKey KeyEnter) Down _ _ ) (GameOver _gameState _player) = initialWorld
   
 gameOverHandler _event state = state
 
-initialWorld :: State
+-- | Initial state of the world
+initialWorld 
+  :: State -- | Initial state of the world
 initialWorld = Selected (GameState unitsStart firstPlayer sortedUnits 0) firstUnit Nothing
   where
     firstUnit = getFirstUnit sortedUnits
     firstPlayer = determineTheFirst sortedUnits
     sortedUnits = sortUnits unitsStart
-timeHandler :: Float -> State -> State
+
+-- | Time handler for the world
+timeHandler 
+  :: Float -- | New time
+  -> State -- | Current world state
+  -> State -- | Updated world state due to the time
 timeHandler _dt (Moving gameState unit coords animation) = moveCharacter (Moving gameState unit coords animation) coords
 timeHandler _dt (AttackMoving _gs _at coords _v _d _an _param) = moveBeforeAttack (AttackMoving _gs _at coords _v _d _an _param)
 timeHandler _dt state = state
 
 
+-- | Definition of the left player
 playerLeft :: Player
 playerLeft = Player LeftPlayer
+-- | Definition of the right player
 playerRight :: Player
 playerRight = Player RightPlayer
-unitsStart :: [Unit]
+
+-- | Initial list of the units
+unitsStart 
+  :: [Unit] -- | List of the units on their initial positions
 unitsStart = [
     createUnit Pikeman playerLeft (0, 0) 100,
     createUnit Archer playerLeft (0, 1) 100,
